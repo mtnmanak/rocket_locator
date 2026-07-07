@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Launcher foreground: simple white rocket silhouette with a porthole punched
+    in the deep-blue background color. Artwork stays inside the 66dp-diameter
+    adaptive-icon safe zone (centered in the 108x108 viewport).
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Body: nose cone tapering into a straight tube. -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,26 C58.5,32 61,40 61,50 L61,68 L47,68 L47,50 C47,40 49.5,32 54,26 Z" />
+
+    <!-- Left fin. -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M47,56 L38,72 L47,68 Z" />
+
+    <!-- Right fin. -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M61,56 L70,72 L61,68 Z" />
+
+    <!-- Exhaust flame below the tube. -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M49.5,71 L54,80 L58.5,71 Z" />
+
+    <!-- Porthole, punched in the background blue. -->
+    <path
+        android:fillColor="#0B3D91"
+        android:pathData="M54,42 m-3.5,0 a3.5,3.5 0 1,1 7,0 a3.5,3.5 0 1,1 -7,0 Z" />
+</vector>

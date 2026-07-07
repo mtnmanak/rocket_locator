@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Platform theme shown before Compose takes over; all real theming is in Compose. -->
+    <style name="Theme.RocketLocator" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>
