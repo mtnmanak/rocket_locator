@@ -23,3 +23,9 @@ keystore.properties
 # Logs / captures
 *.log
 captures/
+
+# Local research artifacts (scrubbed from history 2026-07-07, never re-commit)
+appicon.png
+eggfaq.html
+rl_field2.html
+cdx_download.txt
