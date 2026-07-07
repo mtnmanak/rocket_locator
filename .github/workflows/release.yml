@@ -1,0 +1,58 @@
+name: Release
+
+# Pushing a tag like v0.03 builds a signed release APK and publishes it as a
+# GitHub Release with a STABLE asset name, so the website's download link
+# (releases/latest/download/rocket-locator-26.apk) always serves the newest
+# version without ever changing.
+#
+# Required repository secrets (Settings -> Secrets and variables -> Actions):
+#   SIGNING_KEYSTORE_BASE64   base64 of release.jks
+#   SIGNING_STORE_PASSWORD    keystore password
+#   SIGNING_KEY_ALIAS         rocketlocator26
+#   SIGNING_KEY_PASSWORD      key password (same as store password)
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Decode signing keystore
+        run: echo "${{ secrets.SIGNING_KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/release.jks"
+
+      - name: Run tests
+        run: ./gradlew :core:test :transport:test
+
+      - name: Build signed release APK
+        env:
+          SIGNING_STORE_FILE: ${{ runner.temp }}/release.jks
+          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+        run: ./gradlew :app:assembleRelease
+
+      - name: Stable-name the APK
+        run: cp app/build/outputs/apk/release/app-release.apk rocket-locator-26.apk
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: rocket-locator-26.apk
+          generate_release_notes: true
+          body: |
+            Install: download `rocket-locator-26.apk` below and open it on your Android device.
+            Full instructions and changelog: see the repository README and CHANGELOG.md.
