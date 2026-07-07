@@ -8,7 +8,36 @@
     <string name="card_path">Flight path</string>
 
     <string name="status_connected">Connected</string>
+    <string name="status_connecting">Connecting…</string>
     <string name="status_disconnected">Disconnected</string>
+
+    <string name="action_devices">Devices</string>
+    <string name="action_back">Back</string>
+    <string name="btn_run_simulator">Run simulator</string>
+    <string name="btn_disconnect">Disconnect</string>
+    <string name="btn_connect">Connect</string>
+    <string name="btn_grant_permission">Grant permission</string>
+    <string name="btn_scan">Scan</string>
+    <string name="btn_stop_scan">Stop</string>
+    <string name="home_source_none">No source</string>
+
+    <string name="devices_title">Devices</string>
+    <string name="devices_permission_title">Bluetooth permission needed</string>
+    <string name="devices_permission_rationale">Bluetooth permission is needed to list and connect to your tracker receiver.</string>
+    <string name="devices_section_paired">Paired devices (Bluetooth Classic)</string>
+    <string name="devices_paired_hint">Eggfinder/Missile Works HC-06 receivers: pair in Android Settings first, PIN 1234.</string>
+    <string name="devices_section_ble">BLE devices</string>
+    <string name="devices_section_console">Live NMEA console</string>
+    <string name="devices_no_bluetooth">This device has no Bluetooth hardware.</string>
+    <string name="devices_none_paired">No paired devices.</string>
+    <string name="devices_no_scan_results">No BLE devices found yet. Tap Scan to search.</string>
+    <string name="devices_unnamed">(unnamed)</string>
+    <string name="devices_rssi_dbm">%1$d dBm</string>
+    <string name="devices_console_empty">No NMEA lines yet.</string>
+    <string name="devices_bluetooth_off_title">Bluetooth is off</string>
+    <string name="devices_bluetooth_off_body">Turn on Bluetooth in system settings — paired devices and scans will show nothing until then.</string>
+    <string name="devices_location_off_title">Location is off</string>
+    <string name="devices_location_off_body">On this Android version, BLE scanning finds nothing while the system Location toggle is off. Turn on Location to scan (no location data is used).</string>
 
     <string name="label_fix_quality">Fix quality</string>
     <string name="label_satellites">Satellites in use</string>
@@ -19,5 +48,5 @@
     <string name="label_path_points">Path points</string>
 
     <string name="ticker_waiting">waiting for NMEA data…</string>
-    <string name="footer_version">v0.01 · simulator demo</string>
+    <string name="footer_version">v0.02 beta</string>
 </resources>

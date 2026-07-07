@@ -13,8 +13,8 @@ android {
         minSdk = 26
         targetSdk = 35
         // Beta versioning: versionName 0.NN, versionCode = NN (see CHANGELOG.md)
-        versionCode = 1
-        versionName = "0.01"
+        versionCode = 2
+        versionName = "0.02"
     }
 
     buildTypes {
@@ -53,5 +53,6 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.navigation.compose)
     implementation(libs.kotlinx.coroutines.android)
 }
