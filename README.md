@@ -26,6 +26,8 @@ Any receiver that streams standard NMEA over a Bluetooth serial link should work
 
 ## Installation
 
+**Download page: <https://www.mountainmanrockets.com/rocket_locator/>**
+
 Distributed as a direct APK download (sideload) via GitHub Releases, and via F-Droid after the first stable release. Not currently on the Play Store.
 
 ## Building
