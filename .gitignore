@@ -1,0 +1,25 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Local configuration (machine-specific paths)
+local.properties
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Signing — release keystores must NEVER be committed
+*.keystore
+*.jks
+keystore.properties
+
+# Logs / captures
+*.log
+captures/
