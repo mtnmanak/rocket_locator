@@ -41,4 +41,14 @@ Windows dev note: files created on Windows lack the executable bit — any new s
 
 `git tag v0.NN && git push origin v0.NN` → CI tests, builds, signs, publishes a GitHub Release with asset `rocket-locator-26.apk` (stable name — the website download button depends on it). Signing uses GitHub secrets; the keystore itself lives outside the repo and must never be committed (`.gitignore` covers it). Local release signing needs `keystore.properties` at the repo root (machine-local).
 
-Website: https://www.mountainmanrockets.com/rocket_locator/ — source of truth is `site/deploy/index.html`; changes there must be re-uploaded to the WordPress subfolder manually.
+Website: https://www.mountainmanrockets.com/rocket_locator/ — source of truth is
+`site/deploy/index.html`, currently served from a hand-uploaded WordPress
+subfolder. **That subfolder is END-OF-LIFE**: mountainmanrockets.com is being
+replatformed (Astro on Cloudflare Pages, repo `mountainmanrockets`), WordPress
+dies at DNS cutover, and the new site 301s `/rocket_locator/` to its
+`/online_tools/` page, where the app has an ALPHA tile. So: do NOT spend effort
+on the WP copy beyond emergencies, and do NOT re-upload there as a matter of
+course. The promo page's future home (a real page on the new site, or GitHub as
+the canonical landing) is an open decision — raise it with Eric before
+redesigning `site/deploy/`. The APK download button's contract is unchanged:
+the GitHub Release asset name `rocket-locator-26.apk` must stay stable.
