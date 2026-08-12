@@ -2,6 +2,15 @@
 
 Android app (Kotlin, Jetpack Compose) that receives NMEA GPS telemetry from model-rocket trackers over Bluetooth and guides the user to the landed rocket. GPL-3.0. Homage to Brune Studios' defunct "GPS Rocket Locator" (2013–2020), rebuilt clean-room.
 
+> ## 🎫 Feedback / issue tracking — this repo keeps its OWN Issues tab
+>
+> Unlike the four browser tools, this app does **not** route into the central tracker. Its
+> own Issues tab is its front door, and that is deliberate — see `docs/feedback-tracker.md`
+> for why, and for the standing UI rulings if you build a feedback affordance in the app.
+>
+> **Keep Issues enabled here.** It is the one deliberate exception to the "disable Issues"
+> rule that applies to every other tool repo.
+
 ## Read first
 
 - `docs/build-plan.md` — locked decisions, architecture, phase roadmap and where we are in it
