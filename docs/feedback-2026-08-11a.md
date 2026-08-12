@@ -1,0 +1,7 @@
+# OpenRocket Online — Notes & Feature Requests
+**Date:** 11 August 2026 Next Date
+
+- A lot has changed in the background since our last session - I switched everything over to the new CloudFlare hosting for the dev version of the new website rollout, so we are developing in that space from now on. Check everything to make sure you understand the changes and new deployment workflow
+- Along with that, I moved the local git repo from G:\git to E:\git and I have been shifting between working on my deskttop computer and my laptop, there should be no issue, but make sure to check the local repo and the github repo to ensure there are no discrepancies
+- I created a separate GitHub repo to track issues and user submissions (bugs, design issues, feature requests, etc) for my new website. Should we use the issue tracking in this apps repo for tracking issues specificially for this app or should we use the website tracking repo one for that? It feels like this tool deserves it's own issue tracking repo. Either way, whichever direction we go, the tool needs to have a mechanism to report app bugs and request features. recommend how that should look, but it feels like a button/option in the header or footer for the user to get to the issues tracker.
+- check the github-actions-node20-bump.md file in docs and make sure we have completed the work that needs to be done for Node
