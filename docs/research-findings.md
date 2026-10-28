@@ -46,6 +46,36 @@ Full-screen map; top-left readouts (Rocket Distance, Current Altitude, Max Altit
 - One 2022 forum report mentions an Eggfinder BT module advertising as "**BT-04**" (HM-10-clone family → BLE FFE0/FFE1 plausible) — needs confirmation whether Eggtimer shipped a BLE variant.
 - Sources: [Eggfinder_Bluetooth.pdf](http://eggtimerrocketry.com/wp-content/uploads/2018/06/Eggfinder_Bluetooth.pdf), [LCD Users Guide 2.01c](http://eggtimerrocketry.com/wp-content/uploads/2021/05/Eggfinder-LCD-Users-Guide-2_01c1.pdf)
 
+### Eggtimer LR series (LoRa) ⚠️ announced, not shipped — app integration unknown
+
+Eggtimer is replacing its Hope RF radio (used since ~2014; its SDR chip is out of production) with a LoRa-based
+family. Read 2026-10-27 from Cris Erving's posts in the TRF thread
+[Some Updates from Eggtimer Rocketry](https://www.rocketryforum.com/threads/some-updates-from-eggtimer-rocketry.198764/)
+(#1–#40, 2 Sep – 22 Oct 2026) and the [LR-Series FAQ](https://eggtimerrocketry.com/lr_faq/). Vendor statements
+about unreleased products — re-verify against the user guides when they ship.
+
+- **Products:** TX-LR GPS transmitter (up to 1 W), Quasar-LR GPS/altimeter (up to 500 mW, "sandwich" board, same
+  footprint), Mini-LR GPS (~150 mW; the FAQ and #40 list it, although #1 had said there'd be no Mini replacement),
+  Eggtimer Telemetry Module LR (55–440 mW on 3.3 V), **LCD-LR receiver**. The existing LCD-GPS Module and Voice
+  Module work with the LCD-LR.
+- **Radio:** LoRa on **LLCC68**-based modules (not the more common SX1262). **900 MHz only**: no 70 cm (Ham
+  bandwidth limit conflicts with LoRa), and EU/UK stays on the Hope RF 869 MHz products. NZ/AU variant limited to
+  916–927 MHz, default 921. 25 base frequencies × 20 ID codes × ≥ 2 data rates; one Quasar-LR data rate is marked
+  Ham-only (bandwidth under 500 kHz, ~40 % more range).
+- **Not compatible** with Hope RF Eggfinder/Quasar gear (different frequencies and modulation; no retrofit or
+  conversion kit) and deliberately different from other rocketry LoRa systems. Users keep the old receiver for old
+  transmitters, so **both generations will be in the field for years**.
+- **Timeline:** PC boards ordered 22 Oct 2026; shipping targeted by end of 2026. Hope RF gear stays on sale while
+  modules last (900 MHz modules through end of 2026; 869/433 MHz well into 2027) and stays supported.
+- **Phone link: not stated.** Cris describes the LCD-LR as the display ("there are no apps to go out of sync with
+  the transmitters"). Nothing yet says whether the LCD-LR keeps the 4-pin serial/Bluetooth header that the current
+  Eggfinder LCD uses, or what format any such output would carry. The over-the-air packet format isn't promised
+  either; only the radio settings will be documented ("a discussion of range vs. radio settings", #30).
+- **What this means for the app:** if the LCD-LR keeps a serial tap that emits NMEA, the existing
+  `ClassicSppSource`/`BleUartSource` path covers it unchanged. If it emits a different format, that's a new parser in
+  `:core`. If it has no tap at all, the LR series can't feed the app without a vendor change or our own LoRa
+  receiver (needs the packet format). Decide once the LCD-LR user guide and hardware are in hand.
+
 ### Missile Works T3 / RTx ✅ verified 3-0
 
 - **T3**: standard (non-proprietary) NMEA serial stream over Bluetooth; vendor's T3-NMEA page teaches decoding **$GPGGA**. Officially lists compatible apps: Blue GPS / Rocket Track / **Rocket Locator** / GPS Connector.
@@ -59,6 +89,8 @@ Full-screen map; top-left readouts (Rocket Distance, Current Altitude, Max Altit
 ### Ecosystem summary
 
 Every budget tracker (Eggfinder, T3, RTx) converges on **one pattern: standard NMEA, one-way, over HC-06 Bluetooth Classic SPP, 9600 8N1, PIN 1234**. That single code path covers the whole primary hardware list.
+
+The Eggtimer LR series (above) may break this pattern: whether its LCD-LR receiver offers any phone-facing output is not yet known.
 
 ---
 
@@ -95,6 +127,8 @@ Every budget tracker (Eggfinder, T3, RTx) converges on **one pattern: standard N
 2. Did Eggtimer ever ship a **BLE (BT-04/HM-10-clone) module** variant, making the FFE0 path load-bearing for real hardware?
 3. **Exact NMEA sentence set** emitted by Eggfinder TX and T3/RTx (GGA only, or GGA+RMC+GSA+GSV?) and whether newer units emit `$GNGGA` — matters because the original app required *both* GGA and RMC before updating position.
 4. MapLibre offline tile packaging best practice (MBTiles vs PMTiles) + a satellite-imagery source with acceptable licensing for offline caching.
+5. **Eggtimer LCD-LR phone output** — does the LCD-LR keep a serial/Bluetooth header? If so: link type (Classic SPP or BLE), baud rate, and data format (raw NMEA, re-generated NMEA, or something new)? Answer from the LCD-LR user guide and real hardware once they ship (targeted end of 2026); asking Cris directly may be quicker.
+6. **Eggtimer LR over-the-air packet format** — will it be published? Only matters if we ever build our own LoRa receiver (LLCC68-compatible) for the LR transmitters.
 
 ## 6. Unconfirmed / lost to history
 

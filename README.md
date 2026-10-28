@@ -25,6 +25,7 @@ Your rocket carries a GPS transmitter. A handheld RF receiver picks up its telem
 | Missile Works T3 / RTx (+ HC-06 module) | Bluetooth Classic SPP | Primary target |
 | HM-10/BT-04-style BLE serial modules | BLE GATT (FFE0/FFE1) | Supported |
 | Featherweight BlueRaven / GPS | Proprietary BLE | Planned (post-1.0) |
+| Eggtimer LR series (LoRa; LCD-LR receiver) | Not yet known | Planned once the hardware ships (late 2026) |
 
 Any receiver that streams standard NMEA over a Bluetooth serial link should work.
 

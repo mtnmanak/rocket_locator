@@ -6,7 +6,7 @@
 
 | Decision | Choice |
 |---|---|
-| Hardware scope (v1.0) | Bluetooth Classic SPP (Eggfinder RX/LCD, Missile Works T3/RTx — 9600 8N1, PIN 1234) **+** BLE FFE0/FFE1 (HM-10/BT-04-style UART). Featherweight deferred (proprietary BLE, needs reverse engineering or vendor cooperation) |
+| Hardware scope (v1.0) | Bluetooth Classic SPP (Eggfinder RX/LCD, Missile Works T3/RTx — 9600 8N1, PIN 1234) **+** BLE FFE0/FFE1 (HM-10/BT-04-style UART). Featherweight deferred (proprietary BLE, needs reverse engineering or vendor cooperation). Eggtimer's LoRa **LR series** (shipping ~end 2026) is added once its receiver's phone link is known, alongside, never instead of, the Hope RF Eggfinder gear (see research-findings §2) |
 | Maps | Layered: **compass-first recovery mode** (no map data required) → **MapLibre offline** (pre-downloaded regions + MBTiles/PMTiles sideload) → online extras (satellite basemap, Google Earth/Maps hand-off, KML export) |
 | Platform | Native Android, **Kotlin + Jetpack Compose**; core logic in a UI-free pure-Kotlin module to keep a future iOS/KMP path open |
 | License | **GPL-3.0**, developed clean-room in a **private repo during beta**, public at release. No code copied from unlicensed prior art (original RocketLocator, SimpleModelTracker); BearConsole2 (GPL-3.0) adaptable if ever useful |
@@ -100,7 +100,7 @@ Region downloader (streets + NAIP/Esri satellite where licensed), MBTiles/PMTile
 KML/GPX export, Google Earth/Maps hand-off, session log browser, sounds/settings completeness, dark theme, accessibility pass, app icon/branding.
 
 **Phase 7 — Beta → release**
-Play internal testing track with rocketry-club testers across the hardware matrix (Eggfinder LCD+BT, T3, RTx, any BLE module); field-test protocol doc; crash reporting (self-hostable/privacy-respecting, e.g. ACRA); fix cycle; then: repo public, Play production, F-Droid submission, announce on TheRocketryForum (where the original's users still are).
+Play internal testing track with rocketry-club testers across the hardware matrix (Eggfinder LCD+BT, T3, RTx, any BLE module, and the Eggtimer LR series if it has a phone link by then); field-test protocol doc; crash reporting (self-hostable/privacy-respecting, e.g. ACRA); fix cycle; then: repo public, Play production, F-Droid submission, announce on TheRocketryForum (where the original's users still are).
 
 **Deferred (post-1.0)**: Featherweight BlueRaven/GPS (needs BLE protocol reverse-engineering with real hardware), iOS/KMP evaluation, live flight telemetry extras (apogee detection from GGA altitude), multi-rocket tracking.
 
@@ -113,9 +113,10 @@ Play internal testing track with rocketry-club testers across the hardware matri
 | Offline satellite licensing outside the US | NAIP (public domain) for US; Esri terms verification; MBTiles sideload as universal fallback |
 | Play target-SDK policy churn | Annual maintenance budgeted; GPL + public repo as continuity backstop |
 | Solo-dev bus factor (killed the original) | GPL-3.0, public repo at release, clean modular code, CI |
+| Eggtimer moves to LoRa (LR series, announced Sep 2026); its receiver may have no phone output, or a new format | Keep full support for Hope RF Eggfinder gear (in the field for years); `NmeaSource` abstraction means a new link or parser slots in without touching tracking; get the LCD-LR user guide and hardware before speccing support |
 
 ## Open questions for the user
 
-1. **Test hardware**: which trackers/receivers do you own or can borrow (Eggfinder LCD with BT module? T3? RTx? any HM-10/BT-04 BLE module)? Phase 2's exit criterion depends on this; a $5 HC-06 + USB-serial dongle can bench-simulate a receiver if needed.
+1. **Test hardware**: which trackers/receivers do you own or can borrow (Eggfinder LCD with BT module? T3? RTx? any HM-10/BT-04 BLE module)? Phase 2's exit criterion depends on this; a $5 HC-06 + USB-serial dongle can bench-simulate a receiver if needed. *Update 2026-10-27:* Eggfinder bench testing was held while Eggtimer announced its LoRa LR series; the Hope RF gear still needs the bench test (it stays supported), and the LR series needs a second pass once its hardware can be bought.
 2. **Package name / identity**: need an Android application ID (e.g., reverse-domain like `com.<yourdomain>.rocketlocator26`) and the Google Play developer account holder name.
 3. **Branding**: any preference for icon/visual identity (homage to the original's look vs. fresh)?

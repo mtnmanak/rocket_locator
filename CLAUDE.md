@@ -33,7 +33,7 @@ Android app (Kotlin, Jetpack Compose) that receives NMEA GPS telemetry from mode
 
 ## Target hardware
 
-Eggfinder RX/LCD and Missile Works T3/RTx: NMEA over HC-06 Bluetooth Classic SPP, 9600 8N1, PIN 1234. HM-10/BT-04-style BLE modules: UART service FFE0, characteristic FFE1, 20-byte notification fragments. Featherweight: proprietary BLE, deferred post-1.0.
+Eggfinder RX/LCD and Missile Works T3/RTx: NMEA over HC-06 Bluetooth Classic SPP, 9600 8N1, PIN 1234. HM-10/BT-04-style BLE modules: UART service FFE0, characteristic FFE1, 20-byte notification fragments. Featherweight: proprietary BLE, deferred post-1.0. Eggtimer LR series (LoRa, replacing Hope RF from ~end 2026): phone link unknown until the LCD-LR ships; support both generations (see `docs/research-findings.md` §2).
 
 ## Build
 
