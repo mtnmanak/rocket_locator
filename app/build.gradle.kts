@@ -26,8 +26,8 @@ android {
         minSdk = 26
         targetSdk = 35
         // Beta versioning: versionName 0.NN, versionCode = NN (see CHANGELOG.md)
-        versionCode = 2
-        versionName = "0.02"
+        versionCode = 3
+        versionName = "0.03"
     }
 
     signingConfigs {

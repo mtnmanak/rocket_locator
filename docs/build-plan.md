@@ -79,6 +79,20 @@ Phone location + compass sensor fusion, Recovery screen, radar beep, TTS, last-p
 **Phase 4 — Map screen** *(medium)*
 MapLibre integration, markers/path/line, camera modes, readouts, online satellite + streets styles. **Exit criterion: full simulated flight rendered live on map.**
 
+Map colours (decided at brand adoption, 2026-10-27; Mountain Man Rockets tokens from `docs/brand/tokens.json`). Fixed in both app themes — tiles don't follow the theme, so every mark carries its own halo or casing instead of relying on contrast with the map:
+
+| Element | Colours |
+|---|---|
+| Rocket marker (live) | orange `#FF6509` fill, 1.5 dp navy `#03254F` ring, 2.5 dp white halo (orange↔navy 5.15, navy↔white 15.2: reads on street and satellite tiles) |
+| Rocket marker (stale / last known) | navy fill, orange ring, white halo, plus a fix-age label |
+| Phone position | `#006AAB` dot, 2.5 dp white halo (5.75), 1 dp navy hairline |
+| Accuracy circle | `#006AAB` fill at 15 % (`link-soft`), 1 dp `#006AAB` stroke at 60 % |
+| Flight track | 3 dp orange line on a 5 dp navy casing |
+| You→rocket line | 2.5 dp sky `#6BC6F3` dashed line on a 4.5 dp navy casing (7.96) |
+| Readouts over the map | theme surface chips (`surface` / `onSurface`), never bare text on tiles |
+
+Orange vs blue stays distinct under protan/deutan/tritan simulation; rocket and phone also differ by shape.
+
 **Phase 5 — Offline maps** *(medium)*
 Region downloader (streets + NAIP/Esri satellite where licensed), MBTiles/PMTiles import, optional hillshade/contours. **Exit criterion: airplane-mode field test with pre-downloaded region.**
 

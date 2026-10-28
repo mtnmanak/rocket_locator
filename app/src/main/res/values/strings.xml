@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">GPS Rocket Locator \u201926</string>
+    <string name="app_name">Rocket Locator</string>
 
     <string name="card_connection">Connection</string>
     <string name="card_position">Rocket position</string>
@@ -48,5 +48,5 @@
     <string name="label_path_points">Path points</string>
 
     <string name="ticker_waiting">waiting for NMEA data…</string>
-    <string name="footer_version">v0.02 beta</string>
+    <string name="footer_version">v0.03 beta</string>
 </resources>

@@ -3,6 +3,7 @@ package io.github.mtnmanak.rocketlocator26.ui.devices
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -43,6 +44,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.mtnmanak.rocketlocator26.R
 import io.github.mtnmanak.rocketlocator26.telemetry.ConnectionState
 import io.github.mtnmanak.rocketlocator26.ui.ConnectionStateChip
+import io.github.mtnmanak.rocketlocator26.ui.theme.mmrColors
 
 /**
  * Device picker: permission gate, connection status, paired Classic devices,
@@ -368,7 +370,10 @@ private fun SectionCard(
     title: String,
     content: @Composable () -> Unit,
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -378,7 +383,7 @@ private fun SectionCard(
             Text(
                 text = title,
                 style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary,
+                color = MaterialTheme.mmrColors.accentText,
             )
             content()
         }

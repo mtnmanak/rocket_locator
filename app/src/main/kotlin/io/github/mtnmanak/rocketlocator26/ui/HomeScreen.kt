@@ -1,5 +1,6 @@
 package io.github.mtnmanak.rocketlocator26.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -37,6 +38,7 @@ import io.github.mtnmanak.rocketlocator26.R
 import io.github.mtnmanak.rocketlocator26.core.flight.RocketState
 import io.github.mtnmanak.rocketlocator26.telemetry.ConnectionState
 import io.github.mtnmanak.rocketlocator26.telemetry.TelemetryUiState
+import io.github.mtnmanak.rocketlocator26.ui.theme.mmrColors
 import java.util.Locale
 
 /**
@@ -196,8 +198,8 @@ internal fun ConnectionStateChip(
 /** Color coding shared by home and devices screens: green up, amber pending. */
 @Composable
 internal fun connectionStateColor(state: ConnectionState): Color = when (state) {
-    ConnectionState.CONNECTED -> StatusGreen
-    ConnectionState.CONNECTING -> StatusAmber
+    ConnectionState.CONNECTED -> MaterialTheme.mmrColors.success
+    ConnectionState.CONNECTING -> MaterialTheme.mmrColors.warning
     ConnectionState.DISCONNECTED -> MaterialTheme.colorScheme.onSurfaceVariant
 }
 
@@ -306,7 +308,10 @@ private fun TelemetryCard(
     title: String,
     content: @Composable () -> Unit,
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -316,7 +321,7 @@ private fun TelemetryCard(
             Text(
                 text = title,
                 style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary,
+                color = MaterialTheme.mmrColors.accentText,
             )
             content()
         }
@@ -345,10 +350,6 @@ private fun LabeledValue(
 }
 
 private const val PLACEHOLDER = "—"
-
-/** Mid-tone green/amber chosen to stay legible on both light and dark surfaces. */
-private val StatusGreen = Color(0xFF43A047)
-private val StatusAmber = Color(0xFFF9A825)
 
 private fun formatDegrees(degrees: Double): String =
     String.format(Locale.US, "%.6f°", degrees)

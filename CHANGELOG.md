@@ -4,6 +4,17 @@ All notable changes to GPS Rocket Locator '26 are documented here.
 
 Beta versioning: `0.NN` (versionCode = NN) until the first production release (1.0).
 
+## [0.03] — 2026-10-27
+
+Mountain Man Rockets brand (mmr-brand 1.1.0). Visual only — no change to Bluetooth, GPS, parsing, geodesy, units or permissions.
+
+### Changed
+- **New launcher icon** — adaptive icon on brand navy, round-icon variant, and an Android 13+ themed (monochrome) layer; vendored from mmr-brand by `sync-brand.mjs` (`mmr-brand.json`, `docs/brand/`).
+- **Brand colours** in both light and dark themes, following the system setting. Material You dynamic colour is off so the brand holds on Android 12+.
+- Card titles use the brand's text-size orange; connection status uses the brand success/warning colours (the old amber was unreadable on the light theme); cards get a thin border.
+- Navy window and splash background — no white flash on a cold start.
+- App name shortened to **Rocket Locator**.
+
 ## [0.02] — 2026-07-07
 
 Phase 2: real Bluetooth. Untested against hardware until the first bench session — see `docs/bench-test-protocol.md`.

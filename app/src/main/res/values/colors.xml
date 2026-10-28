@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Deep blue launcher-icon background; matches the theme's primary. -->
-    <color name="ic_launcher_background">#0B3D91</color>
+    <!-- Brand navy (docs/brand/tokens.json theme.dark.bg): window and splash background,
+         so a cold start shows navy rather than a white flash before Compose draws. -->
+    <color name="window_background">#03254F</color>
 </resources>

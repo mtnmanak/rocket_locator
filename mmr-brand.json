@@ -1,0 +1,7 @@
+{
+  "property": "rocket-locator",
+  "brandDir": "docs/brand",
+  "publicDir": null,
+  "brandInclude": ["tokens.json", "marks"],
+  "androidResDir": "app/src/main/res"
+}
