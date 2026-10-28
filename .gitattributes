@@ -1,0 +1,3 @@
+# Vendored from mmr-brand by sync-brand.mjs; --verify compares bytes, so keep
+# them exactly as synced (no CRLF conversion on Windows checkouts).
+docs/brand/** -text
