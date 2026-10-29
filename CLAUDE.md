@@ -37,8 +37,8 @@ suspended only when Eric says in the session not to use Codex and/or agy.
   the briefs, adjudicates disagreements, and runs every gate itself (never trust a lane's self-reported pass). Claude takes
   their digests and doesn't re-read the files they've already handled.
 - **Delegates read `AGENTS.md`, not this file** (agy also reads `GEMINI.md`). Both hold the delegate rules: the hard rules, the
-  invariants, the gates and the report format. Name any CLAUDE.md section a task needs in its brief. Copy both files into
-  every worktree you create if they aren't tracked.
+  invariants, the gates and the report format. Name any CLAUDE.md section a task needs in its brief. Both are tracked
+  (unlike MMRSim), so worktrees have them. Keep the shared part of `AGENTS.md` under 24,000 bytes; Gemini doesn't load past it.
 - Pass bulk input as a FILE in the workspace, not pasted into the prompt. Ask for a short reply, with the details written to a
   file. A second, fresh Codex thread verifies anything a Codex `--write` thread wrote before it ships.
 - Codex desktop plugin root: `C:/Users/Eric/.claude/plugins/cache/openai-codex/codex/1.0.6`. After a Codex update, stop the
