@@ -15,4 +15,5 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
+    failOnNoDiscoveredTests.set(true) // a silently empty test run must fail the build
 }

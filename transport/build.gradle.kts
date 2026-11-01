@@ -1,11 +1,10 @@
 plugins {
     alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
 }
 
 android {
     namespace = "io.github.mtnmanak.rocketlocator26.transport"
-    compileSdk = 35
+    compileSdk = 37
 
     defaultConfig {
         minSdk = 26
@@ -13,12 +12,18 @@ android {
 
     lint { abortOnError = true }
 
+    // AGP 9 creates unit-test tasks late; configure JUnit 5 through the DSL so it also holds
+    // under the configuration cache (a top-level tasks.withType<Test> block was missed there).
+    testOptions {
+        unitTests.all {
+            it.useJUnitPlatform()
+            it.failOnNoDiscoveredTests.set(true) // a silently empty test run must fail the build
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
-    }
-    kotlinOptions {
-        jvmTarget = "17"
     }
 }
 
@@ -30,6 +35,9 @@ dependencies {
     testRuntimeOnly(libs.junit.platform.launcher)
 }
 
-tasks.withType<Test> {
-    useJUnitPlatform()
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
 }

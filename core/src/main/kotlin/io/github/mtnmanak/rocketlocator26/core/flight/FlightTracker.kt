@@ -108,14 +108,8 @@ class FlightTracker(
                     )
             }
 
-            is GsaSentence -> {
-                Unit
-            }
-
-            // link-alive timestamp only
-            is GsvSentence -> {
-                Unit
-            } // link-alive timestamp only
+            // GSA/GSV only prove the link is alive (lastSentenceAtMs, set above).
+            is GsaSentence, is GsvSentence -> {}
         }
 
         state = next

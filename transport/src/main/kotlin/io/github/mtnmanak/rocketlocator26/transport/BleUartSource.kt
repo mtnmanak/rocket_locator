@@ -148,6 +148,8 @@ class BleUartSource(
         val messages = Channel<GattMessage>(Channel.UNLIMITED)
         try {
             val device = resolveDevice()
+            // Deprecated in the API 37 SDK; still the overload that covers minSdk 26 with TRANSPORT_LE.
+            @Suppress("DEPRECATION")
             gatt = device.connectGatt(
                 context,
                 // autoConnect =
@@ -295,9 +297,7 @@ class BleUartSource(
                     throw IOException("BLE connection failed (status ${message.status})")
                 }
 
-                else -> {
-                    Unit
-                }
+                else -> {}
             }
         }
     }
@@ -323,9 +323,7 @@ class BleUartSource(
                     throw IOException("BLE link lost during MTU exchange (status ${message.status})")
                 }
 
-                else -> {
-                    Unit
-                }
+                else -> {}
             }
         }
     }
@@ -359,9 +357,7 @@ class BleUartSource(
                     throw IOException("BLE link lost during service discovery (status ${message.status})")
                 }
 
-                else -> {
-                    Unit
-                }
+                else -> {}
             }
         }
     }
@@ -439,9 +435,7 @@ class BleUartSource(
                     throw IOException("BLE device disconnected (status ${message.status})")
                 }
 
-                else -> {
-                    Unit
-                }
+                else -> {}
             }
         }
     }
