@@ -66,10 +66,13 @@ Eggfinder RX/LCD and Missile Works T3/RTx: NMEA over HC-06 Bluetooth Classic SPP
 Requires JDK 17 + Android SDK ~~35~~ platform 37 (write `local.properties` with `sdk.dir=...`; forward slashes).
 
 ```
-./gradlew :core:test :transport:test :app:testDebugUnitTest   # unit tests (~~208+~~ 354+, must stay green)
+./gradlew :core:test :transport:test :app:testDebugUnitTest   # unit tests (~~208+~~ ~~354+~~ 390+, must stay green)
 ./gradlew :app:assembleDebug           # debug APK
 ```
-CI also runs ktlint 1.8.0 and detekt 1.23.8 via checksum-verified CLIs; `config/detekt/baseline.xml` holds 74 entries covering the 103 pre-existing findings.
+CI also runs ktlint 1.8.0 and detekt 1.23.8 via checksum-verified CLIs; `config/detekt/baseline.xml` holds 72 entries covering the 101 pre-existing findings.
+Gradle verifies every downloaded artifact against `gradle/verification-metadata.xml` (SHA-256); after changing a dependency, run
+`./gradlew --no-configuration-cache --write-verification-metadata sha256 build :app:assembleRelease help` and review the new hashes
+(Dependabot PRs get this automatically from `.github/workflows/dependabot-verification.yml`).
 
 Windows dev note: files created on Windows lack the executable bit — any new shell script needs `git update-index --chmod=+x <file>`.
 

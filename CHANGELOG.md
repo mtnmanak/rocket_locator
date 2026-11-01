@@ -27,6 +27,7 @@ Beta versioning: `0.NN` (versionCode = NN) until the first production release (1
 
 - Hardened CI with pinned actions, release checks and checksum-verified tooling.
 - Added [SECURITY.md](SECURITY.md) with private vulnerability reporting guidance.
+- Gradle now verifies the SHA-256 of every downloaded plugin and library.
 
 ## [0.03] — 2026-10-27
 

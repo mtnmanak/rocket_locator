@@ -108,7 +108,8 @@ export JAVA_HOME=/c/Users/Eric/tools/jdk17 # Eric's example; on another machine,
 ./gradlew :app:assembleDebug
 ```
 
-Measured by the orchestrator on 2026-11-01: **354 unique** = 282 `:core` + 43 `:transport` + 29 `:app`; 0 failures.
+Measured by the orchestrator on 2026-11-01: ~~**354 unique** = 282 `:core` + 43 `:transport` + 29 `:app`~~ **390 unique** = 282 `:core` + 79 `:transport` + 29 `:app`; 0 failures.
+Gradle dependency verification is strict (`gradle/verification-metadata.xml`); a delegate never regenerates it unasked.
 Every test task fails if it discovers no tests.
 
 Never run Gradle in parallel with another Gradle build. The Codex sandbox may prevent Gradle execution or
