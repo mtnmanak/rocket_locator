@@ -71,7 +71,9 @@ Requires JDK 17 + Android SDK ~~35~~ platform 37 (write `local.properties` with 
 ```
 CI also runs ktlint 1.8.0 and detekt 1.23.8 via checksum-verified CLIs; `config/detekt/baseline.xml` holds 72 entries covering the 101 pre-existing findings.
 Gradle verifies every downloaded artifact against `gradle/verification-metadata.xml` (SHA-256); after changing a dependency, run
-`./gradlew --no-configuration-cache --write-verification-metadata sha256 build :app:assembleRelease help` and review the new hashes
+`./gradlew --no-configuration-cache --write-verification-metadata sha256 build :app:assembleRelease help` **with an empty
+`GRADLE_USER_HOME`** (a warm cache skips parent POMs/BOMs, which then fail on CI) and review the new hashes; AAPT2 is
+per-OS, so keep its `linux`, `osx` and `windows` jars recorded
 (Dependabot PRs get this automatically from `.github/workflows/dependabot-verification.yml`).
 
 Windows dev note: files created on Windows lack the executable bit — any new shell script needs `git update-index --chmod=+x <file>`.
