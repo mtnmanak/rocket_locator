@@ -8,3 +8,5 @@ style:
     excludes: ['**/ui/**', '**/test/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**']
     ignorePropertyDeclaration: true
     ignoreCompanionObjectPropertyDeclaration: true
+  MaxLineLength:
+    maxLineLength: 140 # matches .editorconfig max_line_length for ktlint

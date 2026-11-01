@@ -54,21 +54,19 @@
     <ID>MagicNumber:Units.kt$Units$1000.0</ID>
     <ID>MatchingDeclarationName:AppNav.kt$AppRoutes</ID>
     <ID>MatchingDeclarationName:FixAge.kt$AgeUnit</ID>
-    <ID>MaxLineLength:DevicesScreen.kt$text = stringResource(R.string.devices_scan_error, scanError.code, stringResource(scanError.messageRes))</ID>
-    <ID>MaxLineLength:DevicesScreen.kt$text = stringResource(if (needsSettings) R.string.devices_permission_settings else R.string.devices_permission_rationale)</ID>
-    <ID>ReturnCount:BleUartSource.kt$BleUartSource$private suspend fun enableNotifications( gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, messages: ReceiveChannel&lt;GattMessage&gt;, ): List&lt;ByteArray&gt;</ID>
-    <ID>ReturnCount:BleUartSource.kt$BleUartSource$private suspend fun negotiateMtu( gatt: BluetoothGatt, messages: ReceiveChannel&lt;GattMessage&gt;, )</ID>
-    <ID>ReturnCount:BleUartSource.kt$BleUartSource.&lt;no name provided&gt;$@Deprecated("Deprecated in Java") @Suppress("DEPRECATION") override fun onCharacteristicChanged( gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, )</ID>
+    <ID>ReturnCount:BleUartSource.kt$BleUartSource$private suspend fun enableNotifications( gatt: GattLink, characteristic: GattCharacteristic, messages: ReceiveChannel&lt;GattMessage&gt;, ): List&lt;ByteArray&gt;</ID>
+    <ID>ReturnCount:BleUartSource.kt$BleUartSource$private suspend fun negotiateMtu( gatt: GattLink, messages: ReceiveChannel&lt;GattMessage&gt;, )</ID>
     <ID>ReturnCount:DevicesViewModel.kt$DevicesViewModel$fun startBleScan()</ID>
     <ID>ReturnCount:DevicesViewModel.kt$DevicesViewModel$private fun readLocationEnabled(): Boolean</ID>
     <ID>ReturnCount:FlightTracker.kt$FlightTracker$private fun acceptAltitude( altitude: Double?, nowMs: Long, ): Double?</ID>
+    <ID>ReturnCount:GattLink.kt$AndroidGattLinkFactory.&lt;no name provided&gt;$@Deprecated("Deprecated in Java") @Suppress("DEPRECATION") override fun onCharacteristicChanged( gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, )</ID>
     <ID>ReturnCount:NmeaParser.kt$NmeaParser$private fun coordinate( fields: List&lt;String&gt;, valueIndex: Int, hemisphereIndex: Int, isLatitude: Boolean, ): Double?</ID>
     <ID>ReturnCount:NmeaParser.kt$NmeaParser$private fun parseInternal(line: String): NmeaParseResult</ID>
     <ID>ReturnCount:RocketState.kt$fun RocketState.fixAgeMs(nowMs: Long): Long?</ID>
-    <ID>SwallowedException:BleUartSource.kt$BleUartSource$e: IllegalArgumentException</ID>
     <ID>SwallowedException:ClassicSppSource.kt$ClassicSppSource$e: IllegalArgumentException</ID>
-    <ID>ThrowsCount:BleUartSource.kt$BleUartSource$private fun resolveDevice(): BluetoothDevice</ID>
-    <ID>ThrowsCount:BleUartSource.kt$BleUartSource$private suspend fun discoverUartCharacteristic( gatt: BluetoothGatt, messages: ReceiveChannel&lt;GattMessage&gt;, ): BluetoothGattCharacteristic</ID>
+    <ID>SwallowedException:GattLink.kt$AndroidGattLinkFactory$e: IllegalArgumentException</ID>
+    <ID>ThrowsCount:BleUartSource.kt$BleUartSource$private suspend fun discoverUartCharacteristic( gatt: GattLink, messages: ReceiveChannel&lt;GattMessage&gt;, ): GattCharacteristic</ID>
+    <ID>ThrowsCount:GattLink.kt$AndroidGattLinkFactory$private fun resolveDevice(): BluetoothDevice</ID>
     <ID>TooGenericExceptionCaught:NmeaParser.kt$NmeaParser$t: Throwable</ID>
     <ID>TooManyFunctions:DevicesScreen.kt$io.github.mtnmanak.rocketlocator26.ui.devices.DevicesScreen.kt</ID>
     <ID>TooManyFunctions:DevicesViewModel.kt$DevicesViewModel : AndroidViewModel</ID>
