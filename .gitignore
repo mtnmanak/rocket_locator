@@ -29,3 +29,7 @@ appicon.png
 eggfaq.html
 rl_field2.html
 cdx_download.txt
+
+# Engineering-audit output: local-only, never tracked (public repo; unfixed findings)
+docs/audit/
+.claude/audit-*/
