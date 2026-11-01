@@ -1,4 +1,4 @@
-# OpenRocket Online — Notes & Feature Requests
+# ~~OpenRocket Online — Notes & Feature Requests~~ Rocket Locator — Notes & Feature Requests
 **Date:** 11 August 2026 Next Date
 
 - A lot has changed in the background since our last session - I switched everything over to the new CloudFlare hosting for the dev version of the new website rollout, so we are developing in that space from now on. Check everything to make sure you understand the changes and new deployment workflow

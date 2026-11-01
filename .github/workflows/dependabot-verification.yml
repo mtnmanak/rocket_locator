@@ -1,0 +1,58 @@
+name: Dependabot verification metadata
+
+# Strict dependency verification (gradle/verification-metadata.xml) makes every Dependabot
+# version bump fail until the new artifacts' SHA-256 checksums are recorded. On Dependabot's own
+# PRs this regenerates the metadata, commits it to the PR branch (so the new hashes show up in the
+# PR diff for review), and dispatches CI on the branch (commits pushed with GITHUB_TOKEN don't
+# trigger pull_request workflows).
+
+on:
+  pull_request:
+    paths:
+      - 'gradle/libs.versions.toml'
+      - 'gradle/wrapper/gradle-wrapper.properties'
+      - '**/*.gradle.kts'
+
+permissions:
+  contents: read
+
+jobs:
+  regenerate:
+    # Only Dependabot's own branches in this repository; never forks.
+    if: github.actor == 'dependabot[bot]' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # push the regenerated metadata to the Dependabot branch
+      actions: write # dispatch CI on that branch
+    env:
+      HEAD_REF: ${{ github.head_ref }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.head_ref }}
+
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5.0.2
+
+      - name: Regenerate verification metadata
+        run: ./gradlew --no-configuration-cache --write-verification-metadata sha256 build :app:assembleRelease help
+
+      - name: Commit and re-run CI if it changed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- gradle/verification-metadata.xml; then
+            echo "Verification metadata unchanged."
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add gradle/verification-metadata.xml
+          git commit -m "Regenerate dependency verification metadata"
+          git push origin "HEAD:refs/heads/$HEAD_REF"
+          gh workflow run ci.yml --ref "$HEAD_REF"

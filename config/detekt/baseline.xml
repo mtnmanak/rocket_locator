@@ -1,0 +1,78 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>ComplexCondition:FlightTracker.kt$FlightTracker$!gll.isValid || !isMeasuredMode(gll.mode) || lat == null || lon == null</ID>
+    <ID>ComplexCondition:FlightTracker.kt$FlightTracker$!rmc.isValid || !isMeasuredMode(rmc.mode) || lat == null || lon == null</ID>
+    <ID>CyclomaticComplexMethod:NmeaParser.kt$NmeaParser$private fun parseInternal(line: String): NmeaParseResult</ID>
+    <ID>LongMethod:DevicesScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun DevicesScreen( viewModel: DevicesViewModel, onBack: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>LongMethod:HomeScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun HomeContent( state: TelemetryUiState, onRunSimulator: () -&gt; Unit, onDisconnect: () -&gt; Unit, onOpenDevices: () -&gt; Unit, modifier: Modifier = Modifier, onNewFlight: () -&gt; Unit = {}, )</ID>
+    <ID>LongMethod:NmeaParser.kt$NmeaParser$private fun parseInternal(line: String): NmeaParseResult</ID>
+    <ID>LongParameterList:DevicesScreen.kt$( hasBluetoothHardware: Boolean, results: List&lt;ScannedDevice&gt;, isScanning: Boolean, scanError: BleScanError?, scanEnabled: Boolean, connectEnabled: Boolean, onStartScan: () -&gt; Unit, onStopScan: () -&gt; Unit, onConnect: (address: String, name: String?) -&gt; Unit, )</ID>
+    <ID>LongParameterList:HomeScreen.kt$( state: TelemetryUiState, onRunSimulator: () -&gt; Unit, onDisconnect: () -&gt; Unit, onOpenDevices: () -&gt; Unit, modifier: Modifier = Modifier, onNewFlight: () -&gt; Unit = {}, )</ID>
+    <ID>MagicNumber:BleUartSource.kt$BleUartSource$1000</ID>
+    <ID>MagicNumber:ClassicSppSource.kt$ClassicSppSource$1000</ID>
+    <ID>MagicNumber:FlightTracker.kt$FlightTracker$100.0</ID>
+    <ID>MagicNumber:FlightTracker.kt$FlightTracker$120_000.0</ID>
+    <ID>MagicNumber:FlightTracker.kt$FlightTracker$1_000.0</ID>
+    <ID>MagicNumber:FlightTracker.kt$FlightTracker$1_500.0</ID>
+    <ID>MagicNumber:FlightTracker.kt$FlightTracker$5</ID>
+    <ID>MagicNumber:Geodesy.kt$Geodesy$180.0</ID>
+    <ID>MagicNumber:Geodesy.kt$Geodesy$360.0</ID>
+    <ID>MagicNumber:NmeaParser.kt$NmeaParser$10</ID>
+    <ID>MagicNumber:NmeaParser.kt$NmeaParser$100.0</ID>
+    <ID>MagicNumber:NmeaParser.kt$NmeaParser$11</ID>
+    <ID>MagicNumber:NmeaParser.kt$NmeaParser$12</ID>
+    <ID>MagicNumber:NmeaParser.kt$NmeaParser$15</ID>
+    <ID>MagicNumber:NmeaParser.kt$NmeaParser$16</ID>
+    <ID>MagicNumber:NmeaParser.kt$NmeaParser$17</ID>
+    <ID>MagicNumber:NmeaParser.kt$NmeaParser$180.0</ID>
+    <ID>MagicNumber:NmeaParser.kt$NmeaParser$3</ID>
+    <ID>MagicNumber:NmeaParser.kt$NmeaParser$5</ID>
+    <ID>MagicNumber:NmeaParser.kt$NmeaParser$6</ID>
+    <ID>MagicNumber:NmeaParser.kt$NmeaParser$60.0</ID>
+    <ID>MagicNumber:NmeaParser.kt$NmeaParser$7</ID>
+    <ID>MagicNumber:NmeaParser.kt$NmeaParser$8</ID>
+    <ID>MagicNumber:NmeaParser.kt$NmeaParser$9</ID>
+    <ID>MagicNumber:NmeaParser.kt$NmeaParser$90.0</ID>
+    <ID>MagicNumber:SimulatorSource.kt$SimulatorSource$1_000_000</ID>
+    <ID>MagicNumber:SyntheticFlight.kt$SyntheticFlight$0.5</ID>
+    <ID>MagicNumber:SyntheticFlight.kt$SyntheticFlight$1000</ID>
+    <ID>MagicNumber:SyntheticFlight.kt$SyntheticFlight$1000L</ID>
+    <ID>MagicNumber:SyntheticFlight.kt$SyntheticFlight$10L</ID>
+    <ID>MagicNumber:SyntheticFlight.kt$SyntheticFlight$10_000.0</ID>
+    <ID>MagicNumber:SyntheticFlight.kt$SyntheticFlight$10_000L</ID>
+    <ID>MagicNumber:SyntheticFlight.kt$SyntheticFlight$180.0</ID>
+    <ID>MagicNumber:SyntheticFlight.kt$SyntheticFlight$3</ID>
+    <ID>MagicNumber:SyntheticFlight.kt$SyntheticFlight$360.0</ID>
+    <ID>MagicNumber:SyntheticFlight.kt$SyntheticFlight$3_600L</ID>
+    <ID>MagicNumber:SyntheticFlight.kt$SyntheticFlight$4</ID>
+    <ID>MagicNumber:SyntheticFlight.kt$SyntheticFlight$540.0</ID>
+    <ID>MagicNumber:SyntheticFlight.kt$SyntheticFlight$60.0</ID>
+    <ID>MagicNumber:SyntheticFlight.kt$SyntheticFlight$60L</ID>
+    <ID>MagicNumber:SyntheticFlight.kt$SyntheticFlight$86_400L</ID>
+    <ID>MagicNumber:Units.kt$Units$1000.0</ID>
+    <ID>MatchingDeclarationName:AppNav.kt$AppRoutes</ID>
+    <ID>MatchingDeclarationName:FixAge.kt$AgeUnit</ID>
+    <ID>ReturnCount:BleUartSource.kt$BleUartSource$private suspend fun enableNotifications( gatt: GattLink, characteristic: GattCharacteristic, messages: ReceiveChannel&lt;GattMessage&gt;, ): List&lt;ByteArray&gt;</ID>
+    <ID>ReturnCount:BleUartSource.kt$BleUartSource$private suspend fun negotiateMtu( gatt: GattLink, messages: ReceiveChannel&lt;GattMessage&gt;, )</ID>
+    <ID>ReturnCount:DevicesViewModel.kt$DevicesViewModel$fun startBleScan()</ID>
+    <ID>ReturnCount:DevicesViewModel.kt$DevicesViewModel$private fun readLocationEnabled(): Boolean</ID>
+    <ID>ReturnCount:FlightTracker.kt$FlightTracker$private fun acceptAltitude( altitude: Double?, nowMs: Long, ): Double?</ID>
+    <ID>ReturnCount:GattLink.kt$AndroidGattLinkFactory.&lt;no name provided&gt;$@Deprecated("Deprecated in Java") @Suppress("DEPRECATION") override fun onCharacteristicChanged( gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, )</ID>
+    <ID>ReturnCount:NmeaParser.kt$NmeaParser$private fun coordinate( fields: List&lt;String&gt;, valueIndex: Int, hemisphereIndex: Int, isLatitude: Boolean, ): Double?</ID>
+    <ID>ReturnCount:NmeaParser.kt$NmeaParser$private fun parseInternal(line: String): NmeaParseResult</ID>
+    <ID>ReturnCount:RocketState.kt$fun RocketState.fixAgeMs(nowMs: Long): Long?</ID>
+    <ID>SwallowedException:ClassicSppSource.kt$ClassicSppSource$e: IllegalArgumentException</ID>
+    <ID>SwallowedException:GattLink.kt$AndroidGattLinkFactory$e: IllegalArgumentException</ID>
+    <ID>ThrowsCount:BleUartSource.kt$BleUartSource$private suspend fun discoverUartCharacteristic( gatt: GattLink, messages: ReceiveChannel&lt;GattMessage&gt;, ): GattCharacteristic</ID>
+    <ID>ThrowsCount:GattLink.kt$AndroidGattLinkFactory$private fun resolveDevice(): BluetoothDevice</ID>
+    <ID>TooGenericExceptionCaught:NmeaParser.kt$NmeaParser$t: Throwable</ID>
+    <ID>TooManyFunctions:DevicesScreen.kt$io.github.mtnmanak.rocketlocator26.ui.devices.DevicesScreen.kt</ID>
+    <ID>TooManyFunctions:DevicesViewModel.kt$DevicesViewModel : AndroidViewModel</ID>
+    <ID>TooManyFunctions:FlightTracker.kt$FlightTracker</ID>
+    <ID>TooManyFunctions:HomeScreen.kt$io.github.mtnmanak.rocketlocator26.ui.HomeScreen.kt</ID>
+    <ID>TooManyFunctions:NmeaParser.kt$NmeaParser</ID>
+    <ID>TooManyFunctions:SyntheticFlight.kt$SyntheticFlight</ID>
+  </CurrentIssues>
+</SmellBaseline>

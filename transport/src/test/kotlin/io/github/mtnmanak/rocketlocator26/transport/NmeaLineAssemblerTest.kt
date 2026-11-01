@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class NmeaLineAssemblerTest {
-
     // Known-good canonical NMEA fixtures (checksums verified).
     private val gga = "\$GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,*47"
     private val rmc = "\$GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,003.1,W*6A"
@@ -117,9 +116,11 @@ class NmeaLineAssemblerTest {
     @Test
     fun `endless unterminated noise never emits and stays bounded`() {
         val assembler = NmeaLineAssembler(maxLineLength = 32)
-        val noise = ByteArray(1_000) { (it % 251).toByte() }.map { b ->
-            if (b == '\n'.code.toByte()) 'x'.code.toByte() else b
-        }.toByteArray()
+        val noise =
+            ByteArray(1_000) { (it % 251).toByte() }
+                .map { b ->
+                    if (b == '\n'.code.toByte()) 'x'.code.toByte() else b
+                }.toByteArray()
 
         repeat(100) {
             assertTrue(assembler.feed(noise).isEmpty())
@@ -137,9 +138,13 @@ class NmeaLineAssemblerTest {
     @Test
     fun `high-bit bytes decode via ISO-8859-1 without throwing`() {
         val assembler = NmeaLineAssembler()
-        val input = byteArrayOf(
-            0xFF.toByte(), 0xFE.toByte(), 'A'.code.toByte(), '\n'.code.toByte(),
-        )
+        val input =
+            byteArrayOf(
+                0xFF.toByte(),
+                0xFE.toByte(),
+                'A'.code.toByte(),
+                '\n'.code.toByte(),
+            )
 
         val lines = assembler.feed(input)
 

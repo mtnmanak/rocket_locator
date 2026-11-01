@@ -17,7 +17,6 @@ import io.github.mtnmanak.rocketlocator26.telemetry.TelemetryRepository
 import io.github.mtnmanak.rocketlocator26.telemetry.TelemetryUiState
 import io.github.mtnmanak.rocketlocator26.transport.BleUartSource
 import io.github.mtnmanak.rocketlocator26.transport.ClassicSppSource
-import kotlin.math.roundToInt
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -26,6 +25,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 /**
  * Foreground service that keeps the Bluetooth link and NMEA parsing alive
@@ -44,7 +44,6 @@ import kotlinx.coroutines.launch
  * resurrect itself and silently reconnect Bluetooth without the user asking.
  */
 class TrackingService : Service() {
-
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     private var notificationJob: Job? = null
@@ -57,7 +56,11 @@ class TrackingService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+    override fun onStartCommand(
+        intent: Intent?,
+        flags: Int,
+        startId: Int,
+    ): Int {
         when (intent?.action) {
             ACTION_STOP -> stopTracking()
             else -> startTracking(intent)
@@ -88,10 +91,11 @@ class TrackingService : Service() {
             return
         }
         val name = intent.getStringExtra(EXTRA_NAME)
-        val source = when (intent.getStringExtra(EXTRA_TYPE)) {
-            TYPE_BLE -> BleUartSource(applicationContext, address, name)
-            else -> ClassicSppSource(applicationContext, address, name)
-        }
+        val source =
+            when (intent.getStringExtra(EXTRA_TYPE)) {
+                TYPE_BLE -> BleUartSource(applicationContext, address, name)
+                else -> ClassicSppSource(applicationContext, address, name)
+            }
         telemetry.connect(source)
 
         startForegroundCompat(buildNotification(telemetry.uiState.value))
@@ -100,22 +104,24 @@ class TrackingService : Service() {
         // plain collect-then-delay loop always renders the latest snapshot
         // while updating at most once every NOTIFICATION_UPDATE_MS.
         notificationJob?.cancel()
-        notificationJob = serviceScope.launch {
-            val manager = getSystemService(NotificationManager::class.java)
-            telemetry.uiState.collect { state ->
-                manager.notify(NOTIFICATION_ID, buildNotification(state))
-                delay(NOTIFICATION_UPDATE_MS)
+        notificationJob =
+            serviceScope.launch {
+                val manager = getSystemService(NotificationManager::class.java)
+                telemetry.uiState.collect { state ->
+                    manager.notify(NOTIFICATION_ID, buildNotification(state))
+                    delay(NOTIFICATION_UPDATE_MS)
+                }
             }
-        }
 
         // DISCONNECTED is terminal by contract (retry backoffs read as
         // CONNECTING): fatal source errors and completed streams must not
         // leave a zombie foreground service holding a connectedDevice claim.
         stopWatchJob?.cancel()
-        stopWatchJob = serviceScope.launch {
-            telemetry.uiState.first { it.connectionState == ConnectionState.DISCONNECTED }
-            stopTracking()
-        }
+        stopWatchJob =
+            serviceScope.launch {
+                telemetry.uiState.first { it.connectionState == ConnectionState.DISCONNECTED }
+                stopTracking()
+            }
     }
 
     private fun stopTracking() {
@@ -144,25 +150,30 @@ class TrackingService : Service() {
     }
 
     private fun buildNotification(state: TelemetryUiState): Notification {
-        val contentIntent = PendingIntent.getActivity(
-            this,
-            0,
-            Intent(this, MainActivity::class.java),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-        )
-        val stopIntent = PendingIntent.getService(
-            this,
-            0,
-            Intent(this, TrackingService::class.java).setAction(ACTION_STOP),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-        )
-        val disconnectAction = Notification.Action.Builder(
-            Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel),
-            "Disconnect",
-            stopIntent,
-        ).build()
+        val contentIntent =
+            PendingIntent.getActivity(
+                this,
+                0,
+                Intent(this, MainActivity::class.java),
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+        val stopIntent =
+            PendingIntent.getService(
+                this,
+                0,
+                Intent(this, TrackingService::class.java).setAction(ACTION_STOP),
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+        val disconnectAction =
+            Notification.Action
+                .Builder(
+                    Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel),
+                    "Disconnect",
+                    stopIntent,
+                ).build()
 
-        return Notification.Builder(this, CHANNEL_ID)
+        return Notification
+            .Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.stat_sys_data_bluetooth)
             .setContentTitle(state.sourceName ?: "Rocket tracker")
             .setContentText(notificationText(state))
@@ -175,13 +186,14 @@ class TrackingService : Service() {
 
     /** e.g. "Connected · 1234 m AGL · 9 sats" or "Connecting…". */
     private fun notificationText(state: TelemetryUiState): String {
-        val parts = mutableListOf(
-            when (state.connectionState) {
-                ConnectionState.CONNECTED -> "Connected"
-                ConnectionState.CONNECTING -> "Connecting…"
-                ConnectionState.DISCONNECTED -> "Disconnected"
-            },
-        )
+        val parts =
+            mutableListOf(
+                when (state.connectionState) {
+                    ConnectionState.CONNECTED -> "Connected"
+                    ConnectionState.CONNECTING -> "Connecting…"
+                    ConnectionState.DISCONNECTED -> "Disconnected"
+                },
+            )
         state.rocket.altitudeAglMeters?.let { parts += "${it.roundToInt()} m AGL" }
         state.rocket.satellitesInUse?.let { parts += "$it sats" }
         return parts.joinToString(" · ")
@@ -209,7 +221,11 @@ class TrackingService : Service() {
          * @param address Bluetooth MAC address of the paired tracker.
          * @param name human-readable device name for the UI/notification.
          */
-        fun startClassic(context: Context, address: String, name: String?) {
+        fun startClassic(
+            context: Context,
+            address: String,
+            name: String?,
+        ) {
             start(context, TYPE_CLASSIC, address, name)
         }
 
@@ -219,7 +235,11 @@ class TrackingService : Service() {
          * @param address Bluetooth MAC address of the tracker.
          * @param name human-readable device name for the UI/notification.
          */
-        fun startBle(context: Context, address: String, name: String?) {
+        fun startBle(
+            context: Context,
+            address: String,
+            name: String?,
+        ) {
             start(context, TYPE_BLE, address, name)
         }
 
@@ -230,11 +250,17 @@ class TrackingService : Service() {
             )
         }
 
-        private fun start(context: Context, type: String, address: String, name: String?) {
-            val intent = Intent(context, TrackingService::class.java)
-                .putExtra(EXTRA_TYPE, type)
-                .putExtra(EXTRA_ADDRESS, address)
-                .putExtra(EXTRA_NAME, name)
+        private fun start(
+            context: Context,
+            type: String,
+            address: String,
+            name: String?,
+        ) {
+            val intent =
+                Intent(context, TrackingService::class.java)
+                    .putExtra(EXTRA_TYPE, type)
+                    .putExtra(EXTRA_ADDRESS, address)
+                    .putExtra(EXTRA_NAME, name)
             context.startForegroundService(intent)
         }
     }

@@ -2,11 +2,9 @@ package io.github.mtnmanak.rocketlocator26.transport
 
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothManager
-import android.bluetooth.BluetoothSocket
 import android.content.Context
 import android.os.SystemClock
-import java.io.IOException
-import java.util.UUID
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
@@ -16,6 +14,7 @@ import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import java.io.IOException
 
 /**
  * An [NmeaSource] backed by a Bluetooth Classic RFCOMM (SPP) link, as used by
@@ -42,56 +41,67 @@ import kotlinx.coroutines.withTimeoutOrNull
  * [SourceEvent.Disconnected], and the flow ends — the permission will not
  * appear by retrying.
  *
+ * The internal constructor substitutes the link, IO dispatcher and monotonic
+ * clock for JVM tests; the public constructor keeps the production defaults.
+ *
  * @param context any context; used to obtain the [BluetoothManager].
  * @param deviceAddress MAC address of the bonded receiver, e.g. "00:14:03:05:59:02".
  * @param deviceName optional friendly device name for the UI; [name] falls back
  *   to [deviceAddress] when null.
  */
 @SuppressLint("MissingPermission")
-class ClassicSppSource(
-    private val context: Context,
+class ClassicSppSource internal constructor(
     private val deviceAddress: String,
-    deviceName: String? = null,
+    deviceName: String?,
+    private val linkFactory: SppLinkFactory,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val nowMs: () -> Long = { SystemClock.elapsedRealtime() },
 ) : NmeaSource {
+    constructor(
+        context: Context,
+        deviceAddress: String,
+        deviceName: String? = null,
+    ) : this(deviceAddress, deviceName, AndroidSppLinkFactory(context, deviceAddress))
 
     override val name: String = deviceName ?: deviceAddress
 
-    override fun events(): Flow<SourceEvent> = flow {
-        val policy = ReconnectPolicy()
-        while (true) {
-            try {
-                runSession(policy) // Returns only by throwing.
-            } catch (e: SecurityException) {
-                emit(
-                    SourceEvent.SourceError(
-                        message = "Bluetooth permission BLUETOOTH_CONNECT not granted: ${e.message}",
-                        willRetry = false,
-                    ),
-                )
+    override fun events(): Flow<SourceEvent> =
+        flow {
+            val policy = ReconnectPolicy()
+            while (true) {
+                try {
+                    runSession(policy) // Returns only by throwing.
+                } catch (e: SecurityException) {
+                    emit(
+                        SourceEvent.SourceError(
+                            message = "Bluetooth permission BLUETOOTH_CONNECT not granted: ${e.message}",
+                            willRetry = false,
+                        ),
+                    )
+                    emit(SourceEvent.Disconnected)
+                    return@flow
+                } catch (e: IllegalArgumentException) {
+                    // getRemoteDevice() rejects malformed MAC addresses; retrying cannot fix that.
+                    emit(
+                        SourceEvent.SourceError(
+                            message = "Invalid Bluetooth address \"$deviceAddress\"",
+                            willRetry = false,
+                        ),
+                    )
+                    emit(SourceEvent.Disconnected)
+                    return@flow
+                } catch (e: IOException) {
+                    emit(
+                        SourceEvent.SourceError(
+                            message = e.message ?: "Bluetooth I/O error",
+                            willRetry = true,
+                        ),
+                    )
+                }
                 emit(SourceEvent.Disconnected)
-                return@flow
-            } catch (e: IllegalArgumentException) {
-                // getRemoteDevice() rejects malformed MAC addresses; retrying cannot fix that.
-                emit(
-                    SourceEvent.SourceError(
-                        message = "Invalid Bluetooth address \"$deviceAddress\"",
-                        willRetry = false,
-                    ),
-                )
-                emit(SourceEvent.Disconnected)
-                return@flow
-            } catch (e: IOException) {
-                emit(
-                    SourceEvent.SourceError(
-                        message = e.message ?: "Bluetooth I/O error",
-                        willRetry = true,
-                    ),
-                )
+                delay(policy.nextDelayMs())
             }
-            emit(SourceEvent.Disconnected)
-            delay(policy.nextDelayMs())
         }
-    }
 
     /**
      * Runs one connect-and-stream session. Never returns normally: it either
@@ -107,29 +117,30 @@ class ClassicSppSource(
      * interrupts.
      */
     private suspend fun FlowCollector<SourceEvent>.runSession(policy: ReconnectPolicy) {
-        val socket = createSocket()
+        val socket = linkFactory.create()
         coroutineScope {
             val inbound = Channel<ByteArray>(Channel.BUFFERED)
-            val reader = launch(Dispatchers.IO) {
-                try {
-                    socket.connect()
-                    inbound.send(CONNECTED_SENTINEL)
-                    val input = socket.inputStream
-                    val buffer = ByteArray(READ_BUFFER_SIZE)
-                    while (true) {
-                        val bytesRead = input.read(buffer)
-                        if (bytesRead < 0) {
-                            inbound.close(IOException("Connection closed by remote device"))
-                            return@launch
+            val reader =
+                launch(ioDispatcher) {
+                    try {
+                        socket.connect()
+                        inbound.send(CONNECTED_SENTINEL)
+                        val input = socket.inputStream
+                        val buffer = ByteArray(READ_BUFFER_SIZE)
+                        while (true) {
+                            val bytesRead = input.read(buffer)
+                            if (bytesRead < 0) {
+                                inbound.close(IOException("Connection closed by remote device"))
+                                return@launch
+                            }
+                            if (bytesRead > 0) inbound.send(buffer.copyOf(bytesRead))
                         }
-                        if (bytesRead > 0) inbound.send(buffer.copyOf(bytesRead))
+                    } catch (e: IOException) {
+                        inbound.close(e)
+                    } catch (e: SecurityException) {
+                        inbound.close(e)
                     }
-                } catch (e: IOException) {
-                    inbound.close(e)
-                } catch (e: SecurityException) {
-                    inbound.close(e)
                 }
-            }
             try {
                 // First message is the post-connect sentinel (or the close cause rethrows).
                 withTimeoutOrNull(CONNECT_TIMEOUT_MS) { inbound.receive() }
@@ -139,12 +150,13 @@ class ClassicSppSource(
 
                 val assembler = NmeaLineAssembler()
                 while (true) {
-                    val chunk = withTimeoutOrNull(WATCHDOG_TIMEOUT_MS) { inbound.receive() }
-                        ?: throw IOException(
-                            "No data received for ${WATCHDOG_TIMEOUT_MS / 1000} s (watchdog)",
-                        )
+                    val chunk =
+                        withTimeoutOrNull(WATCHDOG_TIMEOUT_MS) { inbound.receive() }
+                            ?: throw IOException(
+                                "No data received for ${WATCHDOG_TIMEOUT_MS / 1000} s (watchdog)",
+                            )
                     for (line in assembler.feed(chunk)) {
-                        emit(SourceEvent.LineReceived(line, SystemClock.elapsedRealtime()))
+                        emit(SourceEvent.LineReceived(line, nowMs()))
                     }
                 }
             } finally {
@@ -155,31 +167,7 @@ class ClassicSppSource(
         }
     }
 
-    /**
-     * Resolves the adapter and prepares an RFCOMM socket for the SPP service.
-     *
-     * @throws IOException if Bluetooth is unavailable or turned off (recoverable:
-     *   the user may switch it on).
-     * @throws SecurityException if `BLUETOOTH_CONNECT` is not granted.
-     * @throws IllegalArgumentException if [deviceAddress] is not a valid MAC.
-     */
-    private fun createSocket(): BluetoothSocket {
-        val manager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
-        val adapter = manager?.adapter
-            ?: throw IOException("Bluetooth is not available on this device")
-        if (!adapter.isEnabled) throw IOException("Bluetooth is turned off")
-        val device = adapter.getRemoteDevice(deviceAddress)
-        try {
-            // Discovery degrades RFCOMM connection reliability; stop it first.
-            adapter.cancelDiscovery()
-        } catch (_: SecurityException) {
-            // Requires BLUETOOTH_SCAN, which the app may legitimately lack. Any
-            // running discovery was not ours; proceed and let connect() try.
-        }
-        return device.createRfcommSocketToServiceRecord(SPP_UUID)
-    }
-
-    private fun BluetoothSocket.closeQuietly() {
+    private fun SppLink.closeQuietly() {
         try {
             close()
         } catch (_: IOException) {
@@ -188,9 +176,6 @@ class ClassicSppSource(
     }
 
     private companion object {
-        /** Standard Serial Port Profile service record UUID. */
-        val SPP_UUID: UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
-
         /** Zero-length marker the reader sends once `connect()` has succeeded. */
         val CONNECTED_SENTINEL = ByteArray(0)
 

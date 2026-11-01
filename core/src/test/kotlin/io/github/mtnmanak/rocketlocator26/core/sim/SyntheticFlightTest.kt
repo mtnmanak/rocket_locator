@@ -25,20 +25,20 @@ import kotlin.math.sqrt
  * encoding error here would send someone walking to the wrong field.
  */
 class SyntheticFlightTest {
-
     private val parser = NmeaParser()
 
     private val launch = GeoPoint(48.1173, 11.5167)
-    private val defaultParams = FlightParams(
-        launch = launch,
-        launchAltitudeMslMeters = 545.4,
-        apogeeAglMeters = 800.0,
-        ascentSeconds = 20.0,
-        descentSeconds = 60.0,
-        driftBearingDeg = 84.4,
-        driftDistanceMeters = 400.0,
-        sampleHz = 1,
-    )
+    private val defaultParams =
+        FlightParams(
+            launch = launch,
+            launchAltitudeMslMeters = 545.4,
+            apogeeAglMeters = 800.0,
+            ascentSeconds = 20.0,
+            descentSeconds = 60.0,
+            driftBearingDeg = 84.4,
+            driftDistanceMeters = 400.0,
+            sampleHz = 1,
+        )
 
     // Phase layout for defaultParams at 1 Hz: 5 pad + 20 ascent + 60 descent + 10 landed.
     private val padRange = 0 until 5
@@ -109,11 +109,12 @@ class SyntheticFlightTest {
 
     @Test
     fun lastSampleDecodesToExpectedLandingPoint() {
-        val expectedLanding = destination(
-            launch,
-            defaultParams.driftBearingDeg,
-            defaultParams.driftDistanceMeters,
-        )
+        val expectedLanding =
+            destination(
+                launch,
+                defaultParams.driftBearingDeg,
+                defaultParams.driftDistanceMeters,
+            )
         val decoded = position(gga(samples.last()))
         val error = distanceMeters(expectedLanding, decoded)
         val limit = 0.7 + 0.01 * defaultParams.driftDistanceMeters
@@ -221,11 +222,12 @@ class SyntheticFlightTest {
 
     @Test
     fun landedPhaseIsStationaryAtLandingSite() {
-        val landing = destination(
-            launch,
-            defaultParams.driftBearingDeg,
-            defaultParams.driftDistanceMeters,
-        )
+        val landing =
+            destination(
+                launch,
+                defaultParams.driftBearingDeg,
+                defaultParams.driftDistanceMeters,
+            )
         assertEquals(10, landedRange.count())
         for (i in landedRange) {
             val gga = gga(samples[i])
@@ -336,9 +338,10 @@ class SyntheticFlightTest {
 
     @Test
     fun negativeDriftBearingIsNormalizedAndDriftsWest() {
-        val flight = SyntheticFlight(
-            defaultParams.copy(driftBearingDeg = -90.0, driftDistanceMeters = 200.0),
-        )
+        val flight =
+            SyntheticFlight(
+                defaultParams.copy(driftBearingDeg = -90.0, driftDistanceMeters = 200.0),
+            )
         val westward = flight.samples().toList()
         val descentSample = westward[30] // mid-descent for the default phase layout
         assertEquals(270.0, rmc(descentSample).courseDeg!!, 1e-6)
@@ -361,11 +364,9 @@ class SyntheticFlightTest {
         return (result as NmeaParseResult.Parsed).sentence
     }
 
-    private fun gga(sample: SimulatedSample): GgaSentence =
-        parseOrFail(sample.sentences[0]) as GgaSentence
+    private fun gga(sample: SimulatedSample): GgaSentence = parseOrFail(sample.sentences[0]) as GgaSentence
 
-    private fun rmc(sample: SimulatedSample): RmcSentence =
-        parseOrFail(sample.sentences[1]) as RmcSentence
+    private fun rmc(sample: SimulatedSample): RmcSentence = parseOrFail(sample.sentences[1]) as RmcSentence
 
     private fun position(gga: GgaSentence): GeoPoint {
         assertNotNull(gga.latitude, "GGA latitude decoded to null")
@@ -374,27 +375,37 @@ class SyntheticFlightTest {
     }
 
     /** Haversine great-circle distance, Earth radius 6371008.8 m. */
-    private fun distanceMeters(a: GeoPoint, b: GeoPoint): Double {
+    private fun distanceMeters(
+        a: GeoPoint,
+        b: GeoPoint,
+    ): Double {
         val dLat = (b.latitude - a.latitude) * DEG_TO_RAD
         val dLon = (b.longitude - a.longitude) * DEG_TO_RAD
-        val h = sin(dLat / 2) * sin(dLat / 2) +
-            cos(a.latitude * DEG_TO_RAD) * cos(b.latitude * DEG_TO_RAD) *
-            sin(dLon / 2) * sin(dLon / 2)
+        val h =
+            sin(dLat / 2) * sin(dLat / 2) +
+                cos(a.latitude * DEG_TO_RAD) * cos(b.latitude * DEG_TO_RAD) *
+                sin(dLon / 2) * sin(dLon / 2)
         return 2.0 * EARTH_RADIUS_METERS * asin(sqrt(h))
     }
 
     /** Standard spherical destination formula — the same one the simulator must use. */
-    private fun destination(start: GeoPoint, bearingDeg: Double, distanceMeters: Double): GeoPoint {
+    private fun destination(
+        start: GeoPoint,
+        bearingDeg: Double,
+        distanceMeters: Double,
+    ): GeoPoint {
         if (distanceMeters == 0.0) return start
         val delta = distanceMeters / EARTH_RADIUS_METERS
         val theta = bearingDeg * DEG_TO_RAD
         val phi1 = start.latitude * DEG_TO_RAD
         val lambda1 = start.longitude * DEG_TO_RAD
         val phi2 = asin(sin(phi1) * cos(delta) + cos(phi1) * sin(delta) * cos(theta))
-        val lambda2 = lambda1 + atan2(
-            sin(theta) * sin(delta) * cos(phi1),
-            cos(delta) - sin(phi1) * sin(phi2),
-        )
+        val lambda2 =
+            lambda1 +
+                atan2(
+                    sin(theta) * sin(delta) * cos(phi1),
+                    cos(delta) - sin(phi1) * sin(phi2),
+                )
         val lonDeg = ((lambda2 / DEG_TO_RAD + 540.0) % 360.0) - 180.0
         return GeoPoint(phi2 / DEG_TO_RAD, lonDeg)
     }

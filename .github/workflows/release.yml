@@ -15,27 +15,58 @@ on:
   push:
     tags: ['v*']
 
-permissions:
-  contents: write
-
 jobs:
   release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
 
-      - uses: actions/setup-java@v5
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
         with:
           distribution: temurin
           java-version: '17'
 
-      - uses: gradle/actions/setup-gradle@v5
+      - uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5.0.2
 
-      - name: Decode signing keystore
-        run: echo "${{ secrets.SIGNING_KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/release.jks"
+      - name: Release preflight
+        id: preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          fail() { echo "::error::$*" >&2; exit 1; }
+          read_version_code() {
+            sed -nE 's/^[[:space:]]*versionCode[[:space:]]*=[[:space:]]*([0-9]+)[[:space:]]*(\/\/.*)?$/\1/p'
+          }
+          versionName=$(sed -nE 's/^[[:space:]]*versionName[[:space:]]*=[[:space:]]*"([^"]+)"[[:space:]]*(\/\/.*)?$/\1/p' app/build.gradle.kts)
+          versionCode=$(read_version_code < app/build.gradle.kts)
+          [[ "$versionName" =~ ^[0-9A-Za-z][0-9A-Za-z.+_-]*$ ]] || fail 'Cannot parse a unique versionName.'
+          [[ "$versionCode" =~ ^[0-9]{1,10}$ ]] || fail 'Cannot parse a unique versionCode.'
+          [[ "$GITHUB_REF_NAME" == "v$versionName" ]] || fail "Tag $GITHUB_REF_NAME does not match versionName $versionName."
+
+          previous_tag=$(git tag --list 'v*' --sort=-version:refname | awk -v current="$GITHUB_REF_NAME" '$0 != current && !found { print; found=1 }')
+          if [[ -n "$previous_tag" ]]; then
+            previous_code=$(git show "$previous_tag:app/build.gradle.kts" | read_version_code)
+            [[ "$previous_code" =~ ^[0-9]{1,10}$ ]] || fail "Cannot parse versionCode from $previous_tag."
+            (( 10#$versionCode > 10#$previous_code )) || fail "versionCode $versionCode must exceed $previous_tag's $previous_code."
+          fi
+          awk -v heading="## [$versionName]" '
+            index($0, heading) == 1 {
+              rest = substr($0, length(heading) + 1)
+              if (rest == "" || rest ~ /^[[:space:]]/) found = 1
+            }
+            END { exit !found }
+          ' CHANGELOG.md || fail "CHANGELOG.md needs a heading ## [$versionName]."
+          printf 'version_name=%s\nversion_code=%s\n' "$versionName" "$versionCode" >> "$GITHUB_OUTPUT"
 
       - name: Run tests
         run: ./gradlew :core:test :transport:test
+
+      - name: Decode signing keystore
+        run: echo "${{ secrets.SIGNING_KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/release.jks"
 
       - name: Build signed release APK
         env:
@@ -45,14 +76,41 @@ jobs:
           SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
         run: ./gradlew :app:assembleRelease
 
+      - name: Verify APK
+        shell: bash
+        env:
+          EXPECTED_SIGNER_SHA256: e5495a99122623e96908f0dbc5a3bd5e026d79dadb18fd6965976cddbc60576c
+          VERSION_NAME: ${{ steps.preflight.outputs.version_name }}
+          VERSION_CODE: ${{ steps.preflight.outputs.version_code }}
+        run: |
+          set -euo pipefail
+          fail() { echo "::error::$*" >&2; exit 1; }
+          apk=app/build/outputs/apk/release/app-release.apk
+          apksigner=$(find "$ANDROID_HOME/build-tools" -mindepth 2 -maxdepth 2 -type f -name apksigner | sort -V | tail -n 1)
+          [[ -n "$apksigner" ]] || fail 'No Android build-tools apksigner found.'
+          aapt2="$(dirname "$apksigner")/aapt2"
+          [[ -x "$aapt2" ]] || fail 'No aapt2 alongside the newest apksigner.'
+          certificates=$("$apksigner" verify --print-certs "$apk") || fail 'APK signature verification failed.'
+          signer_sha256=$(printf '%s\n' "$certificates" | sed -nE 's/^Signer #1 certificate SHA-256 digest: ([[:xdigit:]]+)\r?$/\1/p')
+          [[ "${signer_sha256,,}" == "$EXPECTED_SIGNER_SHA256" ]] || fail 'APK signer SHA-256 does not match the release certificate.'
+          badging=$("$aapt2" dump badging "$apk") || fail 'Cannot read APK version metadata.'
+          apk_code=$(printf '%s\n' "$badging" | sed -nE "s/^package:.* versionCode='([^']*)'.*/\1/p")
+          apk_name=$(printf '%s\n' "$badging" | sed -nE "s/^package:.* versionName='([^']*)'.*/\1/p")
+          [[ "$apk_code" == "$VERSION_CODE" ]] || fail "APK versionCode does not match preflight value $VERSION_CODE."
+          [[ "$apk_name" == "$VERSION_NAME" ]] || fail "APK versionName does not match preflight value $VERSION_NAME."
+
       - name: Stable-name the APK
         run: cp app/build/outputs/apk/release/app-release.apk rocket-locator-26.apk
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           files: rocket-locator-26.apk
           generate_release_notes: true
           body: |
             Install: download `rocket-locator-26.apk` below and open it on your Android device.
             Full instructions and changelog: see the repository README and CHANGELOG.md.
+
+      - name: Remove keystore
+        if: always()
+        run: rm -f "$RUNNER_TEMP/release.jks"

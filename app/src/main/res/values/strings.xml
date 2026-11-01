@@ -4,6 +4,7 @@
 
     <string name="card_connection">Connection</string>
     <string name="card_position">Rocket position</string>
+    <string name="card_last_position">Last known position</string>
     <string name="card_altitude">Altitude</string>
     <string name="card_path">Flight path</string>
 
@@ -14,8 +15,14 @@
     <string name="action_devices">Devices</string>
     <string name="action_back">Back</string>
     <string name="btn_run_simulator">Run simulator</string>
+    <string name="btn_new_flight">New flight</string>
+    <string name="btn_cancel">Cancel</string>
+    <string name="confirm_new_flight">Clear the last known rocket position and flight data?</string>
+    <string name="confirm_simulator">Clear the last known rocket position and flight data, then run the simulator?</string>
     <string name="btn_disconnect">Disconnect</string>
     <string name="btn_connect">Connect</string>
+    <string name="btn_connect_device">Connect to %1$s</string>
+    <string name="btn_open_app_settings">Open app settings</string>
     <string name="btn_grant_permission">Grant permission</string>
     <string name="btn_scan">Scan</string>
     <string name="btn_stop_scan">Stop</string>
@@ -24,6 +31,7 @@
     <string name="devices_title">Devices</string>
     <string name="devices_permission_title">Bluetooth permission needed</string>
     <string name="devices_permission_rationale">Bluetooth permission is needed to list and connect to your tracker receiver.</string>
+    <string name="devices_permission_settings">Bluetooth permission was denied and Android can no longer show the request. Open app settings, select Permissions, and allow the Bluetooth or Nearby devices permission (Location on older Android versions).</string>
     <string name="devices_section_paired">Paired devices (Bluetooth Classic)</string>
     <string name="devices_paired_hint">Eggfinder/Missile Works HC-06 receivers: pair in Android Settings first, PIN 1234.</string>
     <string name="devices_section_ble">BLE devices</string>
@@ -31,6 +39,14 @@
     <string name="devices_no_bluetooth">This device has no Bluetooth hardware.</string>
     <string name="devices_none_paired">No paired devices.</string>
     <string name="devices_no_scan_results">No BLE devices found yet. Tap Scan to search.</string>
+    <string name="devices_scan_error">BLE scan failed (code %1$d): %2$s</string>
+    <string name="scan_error_already_started">A scan is already running. Wait a moment, then tap Scan to retry.</string>
+    <string name="scan_error_registration">Scanner registration failed. Toggle Bluetooth off and on, then tap Scan to retry.</string>
+    <string name="scan_error_internal">An internal Bluetooth error stopped the scan. Toggle Bluetooth off and on, then tap Scan to retry.</string>
+    <string name="scan_error_unsupported">BLE scanning is unsupported on this device. Use a paired Bluetooth Classic receiver if available.</string>
+    <string name="scan_error_resources">Bluetooth has too few resources to scan. Stop other Bluetooth activity, then tap Scan to retry.</string>
+    <string name="scan_error_too_frequent">Scans were requested too frequently. Wait at least 30 seconds, then tap Scan to retry.</string>
+    <string name="scan_error_unknown">Bluetooth could not scan. Wait a moment or toggle Bluetooth off and on, then tap Scan to retry.</string>
     <string name="devices_unnamed">(unnamed)</string>
     <string name="devices_rssi_dbm">%1$d dBm</string>
     <string name="devices_console_empty">No NMEA lines yet.</string>
@@ -40,6 +56,33 @@
     <string name="devices_location_off_body">On this Android version, BLE scanning finds nothing while the system Location toggle is off. Turn on Location to scan (no location data is used).</string>
 
     <string name="label_fix_quality">Fix quality</string>
+    <string name="fix_no_current">No current fix</string>
+    <string name="fix_none">No fix</string>
+    <string name="fix_gps">GPS</string>
+    <string name="fix_dgps">DGPS</string>
+    <string name="fix_pps">PPS</string>
+    <string name="fix_rtk_fixed">RTK fixed</string>
+    <string name="fix_rtk_float">RTK float</string>
+    <string name="fix_dead_reckoning">Dead reckoning</string>
+    <string name="fix_unknown">Unknown (%1$d)</string>
+    <string name="age_seconds">%1$d s</string>
+    <string name="age_minutes">%1$d min</string>
+    <string name="age_hours">%1$d h</string>
+    <plurals name="age_seconds_spoken">
+        <item quantity="one">%1$d second</item>
+        <item quantity="other">%1$d seconds</item>
+    </plurals>
+    <plurals name="age_minutes_spoken">
+        <item quantity="one">%1$d minute</item>
+        <item quantity="other">%1$d minutes</item>
+    </plurals>
+    <plurals name="age_hours_spoken">
+        <item quantity="one">%1$d hour</item>
+        <item quantity="other">%1$d hours</item>
+    </plurals>
+    <string name="fix_age_live">Fix %1$s ago</string>
+    <string name="fix_age_stale">Last known position — fix %1$s old</string>
+    <string name="fix_age_unknown">Last known position — fix age unknown</string>
     <string name="label_satellites">Satellites in use</string>
     <string name="label_latitude">Latitude</string>
     <string name="label_longitude">Longitude</string>
@@ -48,5 +91,4 @@
     <string name="label_path_points">Path points</string>
 
     <string name="ticker_waiting">waiting for NMEA data…</string>
-    <string name="footer_version">v0.03 beta</string>
 </resources>

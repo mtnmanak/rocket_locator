@@ -8,8 +8,9 @@ import io.github.mtnmanak.rocketlocator26.core.geo.GeoPoint
  * @property point horizontal position of the sample.
  * @property altitudeMslMeters altitude above mean sea level at the time the
  *   sample was recorded, or null if no altitude was known yet.
- * @property timestampMs receiver-local wall-clock time (epoch millis) at which
- *   the sample was recorded.
+ * @property timestampMs receipt time of the sample, on the same caller-supplied clock as
+ *   [FlightTracker.onResult]'s `nowMs` (monotonic in the app, not epoch millis). A future GPX/KML
+ *   exporter must convert it to wall time.
  */
 data class TrackPoint(
     val point: GeoPoint,
@@ -58,3 +59,20 @@ data class RocketState(
     val lastFixAtMs: Long? = null,
     val path: List<TrackPoint> = emptyList(),
 )
+
+/** A measured fix becomes stale ten seconds after receipt, even on a silent link. */
+const val STALE_AFTER_MS = 10_000L
+
+/** Age of the last live fix, or null without one (including a restored position). */
+fun RocketState.fixAgeMs(nowMs: Long): Long? {
+    val fixedAtMs = lastFixAtMs ?: return null
+    if (nowMs <= fixedAtMs) return 0L
+    // Saturate extreme caller-provided times rather than wrapping to a negative age.
+    return (nowMs - fixedAtMs).takeIf { it >= 0L } ?: Long.MAX_VALUE
+}
+
+/** Pure clock-based check; callers supply a ticking clock, independent of sentence arrival. */
+fun RocketState.isFixStale(
+    nowMs: Long,
+    staleAfterMs: Long = STALE_AFTER_MS,
+): Boolean = fixAgeMs(nowMs)?.let { it >= staleAfterMs } ?: false

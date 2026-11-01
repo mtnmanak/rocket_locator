@@ -10,7 +10,6 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class NmeaLogReplayTest {
-
     private val parser = NmeaParser()
 
     // Known-good canonical fixtures (checksums verified).

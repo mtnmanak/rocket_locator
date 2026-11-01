@@ -4,6 +4,7 @@ import io.github.mtnmanak.rocketlocator26.core.flight.FlightTracker
 import io.github.mtnmanak.rocketlocator26.core.flight.RocketState
 import io.github.mtnmanak.rocketlocator26.core.nmea.NmeaParser
 import io.github.mtnmanak.rocketlocator26.transport.NmeaSource
+import io.github.mtnmanak.rocketlocator26.transport.SimulatorSource
 import io.github.mtnmanak.rocketlocator26.transport.SourceEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -37,7 +38,14 @@ data class TelemetryUiState(
     val rocket: RocketState = RocketState(),
     val lastRawLine: String? = null,
     val recentLines: List<String> = emptyList(),
+    /** Origin of the held position, retained across connects until a replacement fix. */
+    val positionIsSimulator: Boolean = false,
+    /** A retained position is last-known until this session supplies a measured fix. */
+    val awaitingFix: Boolean = false,
 )
+
+/** Starting a demo must not silently discard a real recovery position. */
+fun TelemetryUiState.needsSimulatorConfirmation(): Boolean = rocket.position != null && !positionIsSimulator
 
 /**
  * Single process-wide telemetry pipeline: consumes one [NmeaSource] at a
@@ -58,9 +66,13 @@ data class TelemetryUiState(
  *
  * @param scope main-dispatched scope in which source flows are collected;
  *   outlives any single source (typically the application scope).
+ * @param nowMs monotonic receipt time (the app passes `SystemClock.elapsedRealtime`), shared with Home's age display so a
+ *   wall-clock jump cannot make an old fix look fresh; JVM tests inject a virtual clock.
  */
-class TelemetryRepository(private val scope: CoroutineScope) {
-
+class TelemetryRepository(
+    private val scope: CoroutineScope,
+    private val nowMs: () -> Long, // required: never default to wall time
+) {
     private val parser = NmeaParser()
     private val tracker = FlightTracker()
 
@@ -88,12 +100,13 @@ class TelemetryRepository(private val scope: CoroutineScope) {
      * including [TrackingService] — can treat it as "session over".
      */
     private var retryPending = false
+    private var sourceIsSimulator = false
 
     /**
      * Starts consuming [source], replacing any active source.
      *
-     * Cancels the previous source's collection, resets the [FlightTracker]
-     * and console (a new session starts from a clean slate), publishes
+     * Cancels the previous source's collection and resets the parser session
+     * and console. Retains all flight data until an explicit [newFlight], publishes
      * [ConnectionState.CONNECTING] plus the source's name, and collects
      * [NmeaSource.events] in [scope]. State transitions then follow the
      * source's events; if the flow completes normally (e.g. the simulator
@@ -101,15 +114,16 @@ class TelemetryRepository(private val scope: CoroutineScope) {
      * [ConnectionState.DISCONNECTED].
      */
     fun connect(source: NmeaSource) {
-        activeJob?.cancel()
         val mySession = ++session
+        activeJob?.cancel()
         retryPending = false
-        tracker.reset()
+        sourceIsSimulator = source is SimulatorSource
+        parser.resetSession()
         _uiState.update {
             it.copy(
                 connectionState = ConnectionState.CONNECTING,
                 sourceName = source.name,
-                rocket = tracker.state,
+                awaitingFix = it.rocket.position != null,
                 lastRawLine = null,
                 recentLines = emptyList(),
             )
@@ -117,22 +131,31 @@ class TelemetryRepository(private val scope: CoroutineScope) {
         // NOTE: with Dispatchers.Main.immediate this body starts executing
         // before launch returns, so the stale-session guard uses the token
         // captured above rather than comparing against activeJob.
-        activeJob = scope.launch {
-            source.events()
-                .onCompletion { cause ->
-                    // Normal completion means the source is done for good
-                    // (simulator finished, stream ended). Cancellation is
-                    // handled by whoever cancelled; a newer session owns the
-                    // state now.
-                    if (cause == null && mySession == session) {
-                        _uiState.update { it.copy(connectionState = ConnectionState.DISCONNECTED) }
+        activeJob =
+            scope.launch {
+                source
+                    .events()
+                    .onCompletion { cause ->
+                        // Normal completion means the source is done for good
+                        // (simulator finished, stream ended). Cancellation is
+                        // handled by whoever cancelled; a newer session owns the
+                        // state now.
+                        if (cause == null && mySession == session) {
+                            _uiState.update { it.copy(connectionState = ConnectionState.DISCONNECTED) }
+                        }
+                    }.collect { event ->
+                        if (mySession == session) {
+                            onEvent(event)
+                        }
                     }
-                }
-                .collect { event ->
-                    if (mySession == session) {
-                        onEvent(event)
-                    }
-                }
+            }
+    }
+
+    /** The only flight-clearing action; callers must obtain the user's confirmation. */
+    fun newFlight() {
+        tracker.reset()
+        _uiState.update {
+            it.copy(rocket = tracker.state, positionIsSimulator = false, awaitingFix = false)
         }
     }
 
@@ -158,25 +181,33 @@ class TelemetryRepository(private val scope: CoroutineScope) {
                 _uiState.update { it.copy(connectionState = ConnectionState.CONNECTED) }
             }
 
-            is SourceEvent.Disconnected ->
+            is SourceEvent.Disconnected -> {
                 _uiState.update {
                     it.copy(
                         // A Disconnected during a retry backoff is transient;
                         // the source reconnects by itself.
-                        connectionState = if (retryPending) {
-                            ConnectionState.CONNECTING
-                        } else {
-                            ConnectionState.DISCONNECTED
-                        },
+                        connectionState =
+                            if (retryPending) {
+                                ConnectionState.CONNECTING
+                            } else {
+                                ConnectionState.DISCONNECTED
+                            },
                     )
                 }
+            }
 
             is SourceEvent.LineReceived -> {
                 val result = parser.parse(event.raw)
-                val rocket = tracker.onResult(result, nowMs = System.currentTimeMillis())
+                val previousPosition = tracker.state.position
+                val rocket = tracker.onResult(result, nowMs = nowMs())
+                // FlightTracker creates a new GeoPoint only for an accepted position,
+                // even if the coordinates and receipt millisecond happen to be identical.
+                val receivedFix = rocket.position != null && rocket.position !== previousPosition
                 _uiState.update {
                     it.copy(
                         rocket = rocket,
+                        positionIsSimulator = if (receivedFix) sourceIsSimulator else it.positionIsSimulator,
+                        awaitingFix = if (receivedFix) false else it.awaitingFix,
                         lastRawLine = event.raw,
                         recentLines = appendLine(it.recentLines, event.raw),
                     )
@@ -189,11 +220,12 @@ class TelemetryRepository(private val scope: CoroutineScope) {
                     it.copy(
                         // willRetry means the source is backing off to
                         // reconnect on its own; reflect that as CONNECTING.
-                        connectionState = if (event.willRetry) {
-                            ConnectionState.CONNECTING
-                        } else {
-                            ConnectionState.DISCONNECTED
-                        },
+                        connectionState =
+                            if (event.willRetry) {
+                                ConnectionState.CONNECTING
+                            } else {
+                                ConnectionState.DISCONNECTED
+                            },
                         recentLines = appendLine(it.recentLines, "[error] ${event.message}"),
                     )
                 }
@@ -202,12 +234,16 @@ class TelemetryRepository(private val scope: CoroutineScope) {
     }
 
     /** Appends [line], keeping at most [MAX_RECENT_LINES] entries, newest last. */
-    private fun appendLine(lines: List<String>, line: String): List<String> {
-        val trimmed = if (lines.size >= MAX_RECENT_LINES) {
-            lines.drop(lines.size - MAX_RECENT_LINES + 1)
-        } else {
-            lines
-        }
+    private fun appendLine(
+        lines: List<String>,
+        line: String,
+    ): List<String> {
+        val trimmed =
+            if (lines.size >= MAX_RECENT_LINES) {
+                lines.drop(lines.size - MAX_RECENT_LINES + 1)
+            } else {
+                lines
+            }
         return trimmed + line
     }
 

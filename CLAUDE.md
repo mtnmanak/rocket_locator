@@ -25,6 +25,32 @@ Android app (Kotlin, Jetpack Compose) that receives NMEA GPS telemetry from mode
 - **NMEA parsing never throws** on any input; a no-fix sentence never moves the rocket position; the map/UI must degrade gracefully — a data problem must never crash a recovery in the field.
 - The repository's DISCONNECTED connection state is terminal-only; retry backoff reads as CONNECTING. `TrackingService` relies on this.
 
+## Delegation — standing rule (Eric, 2026-10-28)
+
+Use **Codex `gpt-6.1-sol`** and **agy `gemini-4-argon-high`** wherever they can do the work, to save Claude tokens. The rule is
+suspended only when Eric says in the session not to use Codex and/or agy.
+
+- Codex: `node <codex plugin>/scripts/codex-companion.mjs task --fresh --model gpt-6.1-sol --effort high "<brief>"`.
+  It is read-only unless `--write` is passed. `task --help` starts a real task, so don't call it.
+- agy: `agy-delegate --model gemini-4-argon-high --dir <repo> --timeout 20m "<brief>"`. Never pass `--yolo`.
+- Hand them bulk reads, finding, drafting tests and scripts, docs checks and claim checks. Claude keeps the judgement: it writes
+  the briefs, adjudicates disagreements, and runs every gate itself (never trust a lane's self-reported pass). Claude takes
+  their digests and doesn't re-read the files they've already handled.
+- **Delegates read `AGENTS.md`, not this file** (agy also reads `GEMINI.md`). Both hold the delegate rules: the hard rules, the
+  invariants, the gates and the report format. Name any CLAUDE.md section a task needs in its brief. Both are tracked
+  (unlike MMRSim), so worktrees have them. Keep the shared part of `AGENTS.md` under 24,000 bytes; Gemini doesn't load past it.
+- Pass bulk input as a FILE in the workspace, not pasted into the prompt. Ask for a short reply, with the details written to a
+  file. A second, fresh Codex thread verifies anything a Codex `--write` thread wrote before it ships.
+- Codex desktop plugin root: `C:/Users/Eric/.claude/plugins/cache/openai-codex/codex/1.0.6` (Eric's example); on another machine, locate the equivalent (e.g. `~/.claude/plugins/cache/openai-codex/codex/<ver>/`) and verify it and `scripts/codex-companion.mjs` exist before use. After a Codex update, stop the
+  companion broker (`app-server-broker.mjs serve` and its `codex app-server` child): a stale broker rejects new model ids.
+- agy: one call costs ~80k Gemini tokens even for a one-line question, so batch work into fewer, larger calls. It has no write
+  grant, so treat it as read-only. Exit 15 means a tool was denied headless: rephrase the brief so it needs no commands.
+  Don't add `--yolo`. Exit codes 10/11/12 are quota, auth and timeout.
+- Usage limits: Codex prints *"You've hit your usage limit"* / `Turn failed`, and a job cut off that way writes no report.
+  Recover its findings from `~/.codex/sessions/<yyyy>/<mm>/<dd>/rollout-*`. Then follow the fallback order (retry once, the other lane,
+  then Claude) without asking Eric.
+- `docs/AUDIT_PROMPT.md` applies this rule to the full engineering audit.
+
 ## Modules
 
 - `:core` — NMEA parser, geodesy, `FlightTracker` state machine, flight simulator
@@ -37,12 +63,18 @@ Eggfinder RX/LCD and Missile Works T3/RTx: NMEA over HC-06 Bluetooth Classic SPP
 
 ## Build
 
-Requires JDK 17 + Android SDK 35 (write `local.properties` with `sdk.dir=...`; forward slashes).
+Requires JDK 17 + Android SDK ~~35~~ platform 37 (write `local.properties` with `sdk.dir=...`; forward slashes).
 
 ```
-./gradlew :core:test :transport:test   # unit tests (208+, must stay green)
+./gradlew :core:test :transport:test :app:testDebugUnitTest   # unit tests (~~208+~~ ~~354+~~ 390+, must stay green)
 ./gradlew :app:assembleDebug           # debug APK
 ```
+CI also runs ktlint 1.8.0 and detekt 1.23.8 via checksum-verified CLIs; `config/detekt/baseline.xml` holds 72 entries covering the 101 pre-existing findings.
+Gradle verifies every downloaded artifact against `gradle/verification-metadata.xml` (SHA-256); after changing a dependency, run
+`./gradlew --no-configuration-cache --write-verification-metadata sha256 build :app:assembleRelease help` **with an empty
+`GRADLE_USER_HOME`** (a warm cache skips parent POMs/BOMs, which then fail on CI) and review the new hashes; AAPT2 is
+per-OS, so keep its `linux`, `osx` and `windows` jars recorded
+(Dependabot PRs get this automatically from `.github/workflows/dependabot-verification.yml`).
 
 Windows dev note: files created on Windows lack the executable bit — any new shell script needs `git update-index --chmod=+x <file>`.
 

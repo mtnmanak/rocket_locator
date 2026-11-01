@@ -12,7 +12,8 @@ package io.github.mtnmanak.rocketlocator26.core.nmea
  *    be trusted (malformed digits, missing or unknown hemisphere, out-of-range
  *    values) decode to `null` rather than a plausible-but-wrong number.
  * 3. **Be tolerant of real-world quirks:** leading garbage before `'$'`
- *    (partial lines mid-stream), missing checksums (some devices omit them),
+ *    (partial lines mid-stream), missing checksums until this session has
+ *    validated a checksum (some devices omit them),
  *    lowercase checksum hex, extra trailing fields from newer NMEA revisions,
  *    and short sentences from older firmware.
  *
@@ -21,9 +22,16 @@ package io.github.mtnmanak.rocketlocator26.core.nmea
  * and other well-formed standard types are reported as
  * [NmeaParseResult.Unsupported].
  *
- * The parser is stateless and therefore thread-safe.
+ * Session state records whether this receiver sends checksums. Feed from a
+ * single consumer; this parser is not thread-safe. Call [resetSession] on connect.
  */
 class NmeaParser {
+    private var sawChecksum = false
+
+    /** Starts a receiver session, allowing checksum-less legacy devices again. */
+    fun resetSession() {
+        sawChecksum = false
+    }
 
     /**
      * Parses a single line of receiver output.
@@ -32,7 +40,7 @@ class NmeaParser {
      * after leading garbage, parsing starts from the `'$'`. If a `'*'` is
      * present, the two hex digits following it are validated as the XOR of all
      * characters strictly between `'$'` and `'*'`; if no `'*'` is present the
-     * sentence is accepted without checksum validation.
+     * sentence is accepted only until a checksum has validated in this session.
      *
      * This method never throws, regardless of input.
      *
@@ -75,20 +83,25 @@ class NmeaParser {
                     line,
                 )
             }
-            val expected = checksumField.toIntOrNull(radix = 16)
-                ?: return NmeaParseResult.Failed(
-                    "malformed checksum field '$checksumField' (not hex)",
-                    line,
-                )
+            val expected =
+                checksumField.toIntOrNull(radix = 16)
+                    ?: return NmeaParseResult.Failed(
+                        "malformed checksum field '$checksumField' (not hex)",
+                        line,
+                    )
             val computed = body.fold(0) { acc, c -> acc xor c.code }
             if (computed != expected) {
                 return NmeaParseResult.Failed(
-                    "checksum mismatch: sentence declares %02X, computed %02X".format(expected, computed),
+                    "checksum mismatch: sentence declares ${hex(expected)}, computed ${hex(computed)}",
                     line,
                 )
             }
+            sawChecksum = true
         } else {
-            // Some devices omit the checksum entirely; accept the sentence as-is.
+            if (sawChecksum) {
+                return NmeaParseResult.Failed("missing checksum after checksummed sentences", line)
+            }
+            // Legacy checksum-less devices remain supported in a fresh session.
             body = afterDollar
         }
 
@@ -117,15 +130,16 @@ class NmeaParser {
             )
         }
 
-        val sentence = when (type) {
-            "GGA" -> decodeGga(talker, fields)
-            "RMC" -> decodeRmc(talker, fields)
-            "GLL" -> decodeGll(talker, fields)
-            "VTG" -> decodeVtg(talker, fields)
-            "GSA" -> decodeGsa(talker, fields)
-            "GSV" -> decodeGsv(talker, fields)
-            else -> return NmeaParseResult.Unsupported(type, line) // unreachable
-        }
+        val sentence =
+            when (type) {
+                "GGA" -> decodeGga(talker, fields)
+                "RMC" -> decodeRmc(talker, fields)
+                "GLL" -> decodeGll(talker, fields)
+                "VTG" -> decodeVtg(talker, fields)
+                "GSA" -> decodeGsa(talker, fields)
+                "GSV" -> decodeGsv(talker, fields)
+                else -> return NmeaParseResult.Unsupported(type, line) // unreachable
+            }
         return NmeaParseResult.Parsed(sentence, line)
     }
 
@@ -133,7 +147,10 @@ class NmeaParser {
     // Field index 0 is always the address (e.g. "GPGGA"); data fields start at 1.
     // Missing trailing fields decode to null; extra trailing fields are ignored.
 
-    private fun decodeGga(talker: String, f: List<String>): GgaSentence =
+    private fun decodeGga(
+        talker: String,
+        f: List<String>,
+    ): GgaSentence =
         GgaSentence(
             talker = talker,
             timeUtc = field(f, 1),
@@ -143,11 +160,14 @@ class NmeaParser {
             fixQuality = intField(f, 6) ?: 0,
             satellitesInUse = intField(f, 7),
             hdop = doubleField(f, 8),
-            altitudeMslMeters = doubleField(f, 9),
-            geoidSeparationMeters = doubleField(f, 11),
+            altitudeMslMeters = metersField(f, 9, 10),
+            geoidSeparationMeters = metersField(f, 11, 12),
         )
 
-    private fun decodeRmc(talker: String, f: List<String>): RmcSentence =
+    private fun decodeRmc(
+        talker: String,
+        f: List<String>,
+    ): RmcSentence =
         RmcSentence(
             talker = talker,
             timeUtc = field(f, 1),
@@ -157,18 +177,26 @@ class NmeaParser {
             speedKnots = doubleField(f, 7),
             courseDeg = doubleField(f, 8),
             date = field(f, 9),
+            mode = modeField(f, 12),
         )
 
-    private fun decodeGll(talker: String, f: List<String>): GllSentence =
+    private fun decodeGll(
+        talker: String,
+        f: List<String>,
+    ): GllSentence =
         GllSentence(
             talker = talker,
             latitude = coordinate(f, valueIndex = 1, hemisphereIndex = 2, isLatitude = true),
             longitude = coordinate(f, valueIndex = 3, hemisphereIndex = 4, isLatitude = false),
             timeUtc = field(f, 5),
             isValid = field(f, 6)?.equals("A", ignoreCase = true) == true,
+            mode = modeField(f, 7),
         )
 
-    private fun decodeVtg(talker: String, f: List<String>): VtgSentence =
+    private fun decodeVtg(
+        talker: String,
+        f: List<String>,
+    ): VtgSentence =
         VtgSentence(
             talker = talker,
             courseTrueDeg = doubleField(f, 1),
@@ -176,7 +204,10 @@ class NmeaParser {
             speedKmh = doubleField(f, 7),
         )
 
-    private fun decodeGsa(talker: String, f: List<String>): GsaSentence =
+    private fun decodeGsa(
+        talker: String,
+        f: List<String>,
+    ): GsaSentence =
         GsaSentence(
             talker = talker,
             // 1 means "no fix" — the safe default when the field is malformed.
@@ -186,7 +217,10 @@ class NmeaParser {
             vdop = doubleField(f, 17),
         )
 
-    private fun decodeGsv(talker: String, f: List<String>): GsvSentence =
+    private fun decodeGsv(
+        talker: String,
+        f: List<String>,
+    ): GsvSentence =
         GsvSentence(
             talker = talker,
             totalMessages = intField(f, 1),
@@ -197,16 +231,48 @@ class NmeaParser {
     // --- Field helpers ----------------------------------------------------
 
     /** Returns data field [index] trimmed, or null when absent or empty. */
-    private fun field(fields: List<String>, index: Int): String? =
-        fields.getOrNull(index)?.trim()?.takeIf { it.isNotEmpty() }
+    private fun field(
+        fields: List<String>,
+        index: Int,
+    ): String? = fields.getOrNull(index)?.trim()?.takeIf { it.isNotEmpty() }
 
     /** Field as Int, or null when absent, empty, or malformed. */
-    private fun intField(fields: List<String>, index: Int): Int? =
-        field(fields, index)?.toIntOrNull()
+    private fun intField(
+        fields: List<String>,
+        index: Int,
+    ): Int? = field(fields, index)?.toIntOrNull()
 
     /** Field as finite Double, or null when absent, empty, or malformed. */
-    private fun doubleField(fields: List<String>, index: Int): Double? =
-        field(fields, index)?.toDoubleOrNull()?.takeIf { it.isFinite() }
+    private fun doubleField(
+        fields: List<String>,
+        index: Int,
+    ): Double? =
+        field(fields, index)
+            ?.takeIf { DECIMAL.matches(it) }
+            ?.toDoubleOrNull()
+            ?.takeIf { it.isFinite() }
+
+    /** Empty units support older firmware; other explicit units are not metres. */
+    private fun metersField(
+        fields: List<String>,
+        valueIndex: Int,
+        unitIndex: Int,
+    ): Double? {
+        val unit = field(fields, unitIndex)
+        return if (unit == null || unit.equals("M", ignoreCase = true)) {
+            doubleField(fields, valueIndex)
+        } else {
+            null
+        }
+    }
+
+    /** Malformed nonempty modes must not masquerade as an absent legacy field. */
+    private fun modeField(
+        fields: List<String>,
+        index: Int,
+    ): Char? = field(fields, index)?.let { it.singleOrNull()?.uppercaseChar() ?: '?' }
+
+    private fun hex(value: Int): String = value.toString(16).padStart(2, '0').uppercase()
 
     /**
      * Decodes an NMEA coordinate pair (value field + hemisphere field) to
@@ -225,7 +291,11 @@ class NmeaParser {
         hemisphereIndex: Int,
         isLatitude: Boolean,
     ): Double? {
-        val value = field(fields, valueIndex)?.toDoubleOrNull() ?: return null
+        val syntax = if (isLatitude) LATITUDE else LONGITUDE
+        val value =
+            field(fields, valueIndex)
+                ?.takeIf { syntax.matches(it) }
+                ?.toDoubleOrNull() ?: return null
         if (!value.isFinite() || value < 0.0) return null
         val degrees = (value / 100.0).toInt()
         val minutes = value - degrees * 100.0
@@ -244,6 +314,10 @@ class NmeaParser {
     }
 
     private companion object {
+        val DECIMAL = Regex("-?\\d+(\\.\\d+)?")
+        val LATITUDE = Regex("\\d{1,4}(\\.\\d+)?")
+        val LONGITUDE = Regex("\\d{1,5}(\\.\\d+)?")
+
         /** Sentence types this parser decodes into model objects. */
         val SUPPORTED_TYPES = setOf("GGA", "RMC", "GLL", "VTG", "GSA", "GSV")
 

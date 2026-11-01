@@ -15,7 +15,6 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class FlightTrackerTest {
-
     /** Approximate meters per degree of latitude; exact value is irrelevant
      *  because every distance used sits far from the 2.0 m threshold. */
     private val metersPerDegLat = 111_320.0
@@ -33,20 +32,21 @@ class FlightTrackerTest {
         satellites: Int? = 8,
         hdop: Double? = 0.9,
         altitude: Double? = 1500.0,
-    ): NmeaParseResult = NmeaParseResult.Parsed(
-        GgaSentence(
-            talker = "GP",
-            timeUtc = "123519",
-            latitude = lat,
-            longitude = lon,
-            fixQuality = fixQuality,
-            satellitesInUse = satellites,
-            hdop = hdop,
-            altitudeMslMeters = altitude,
-            geoidSeparationMeters = null,
-        ),
-        raw = "raw",
-    )
+    ): NmeaParseResult =
+        NmeaParseResult.Parsed(
+            GgaSentence(
+                talker = "GP",
+                timeUtc = "123519",
+                latitude = lat,
+                longitude = lon,
+                fixQuality = fixQuality,
+                satellitesInUse = satellites,
+                hdop = hdop,
+                altitudeMslMeters = altitude,
+                geoidSeparationMeters = null,
+            ),
+            raw = "raw",
+        )
 
     private fun rmc(
         lat: Double? = baseLat,
@@ -54,30 +54,35 @@ class FlightTrackerTest {
         isValid: Boolean = true,
         speedKnots: Double? = 22.4,
         courseDeg: Double? = 84.4,
-    ): NmeaParseResult = NmeaParseResult.Parsed(
-        RmcSentence(
-            talker = "GP",
-            timeUtc = "123519",
-            isValid = isValid,
-            latitude = lat,
-            longitude = lon,
-            speedKnots = speedKnots,
-            courseDeg = courseDeg,
-            date = "230394",
-        ),
-        raw = "raw",
-    )
+    ): NmeaParseResult =
+        NmeaParseResult.Parsed(
+            RmcSentence(
+                talker = "GP",
+                timeUtc = "123519",
+                isValid = isValid,
+                latitude = lat,
+                longitude = lon,
+                speedKnots = speedKnots,
+                courseDeg = courseDeg,
+                date = "230394",
+            ),
+            raw = "raw",
+        )
 
     private fun gll(
         lat: Double? = baseLat,
         lon: Double? = baseLon,
         isValid: Boolean = true,
-    ): NmeaParseResult = NmeaParseResult.Parsed(
-        GllSentence(talker = "GP", latitude = lat, longitude = lon, timeUtc = "123519", isValid = isValid),
-        raw = "raw",
-    )
+    ): NmeaParseResult =
+        NmeaParseResult.Parsed(
+            GllSentence(talker = "GP", latitude = lat, longitude = lon, timeUtc = "123519", isValid = isValid),
+            raw = "raw",
+        )
 
-    private fun vtg(course: Double? = 84.4, knots: Double? = 22.4): NmeaParseResult =
+    private fun vtg(
+        course: Double? = 84.4,
+        knots: Double? = 22.4,
+    ): NmeaParseResult =
         NmeaParseResult.Parsed(
             VtgSentence(talker = "GP", courseTrueDeg = course, speedKnots = knots, speedKmh = null),
             raw = "raw",
@@ -119,15 +124,16 @@ class FlightTrackerTest {
         tracker.onResult(gga(), 1_000L)
 
         // A no-fix packet claiming a wildly different position must be ignored.
-        val state = tracker.onResult(
-            gga(lat = 0.0, lon = 0.0, fixQuality = 0, satellites = 3, hdop = 55.0, altitude = 0.0),
-            2_000L,
-        )
+        val state =
+            tracker.onResult(
+                gga(lat = 0.0, lon = 0.0, fixQuality = 0, satellites = 3, hdop = 55.0, altitude = 0.0),
+                2_000L,
+            )
 
         assertEquals(GeoPoint(baseLat, baseLon), state.position, "no-fix GGA must not move position")
         assertEquals(1500.0, state.altitudeMslMeters, "no-fix GGA must not change altitude")
         assertEquals(1500.0, state.maxAltitudeMslMeters)
-        assertEquals(0.9, state.hdop, "no-fix GGA must not change hdop")
+        assertEquals(55.0, state.hdop, "no-fix GGA still updates receiver status")
         assertEquals(1_000L, state.lastFixAtMs, "no-fix GGA must not bump lastFixAtMs")
         assertEquals(1, state.path.size, "no-fix GGA must not add a path point")
         // ...but it does report link health and receiver status:
@@ -178,10 +184,11 @@ class FlightTrackerTest {
     fun `invalid rmc updates telemetry timestamp only`() {
         val tracker = FlightTracker()
         tracker.onResult(gga(), 1_000L)
-        val state = tracker.onResult(
-            rmc(lat = 0.0, lon = 0.0, isValid = false, speedKnots = 999.0, courseDeg = 1.0),
-            2_000L,
-        )
+        val state =
+            tracker.onResult(
+                rmc(lat = 0.0, lon = 0.0, isValid = false, speedKnots = 999.0, courseDeg = 1.0),
+                2_000L,
+            )
 
         assertEquals(GeoPoint(baseLat, baseLon), state.position, "invalid RMC must not move position")
         assertNull(state.speedKnots, "invalid RMC must not set speed")
@@ -245,23 +252,25 @@ class FlightTrackerTest {
         tracker.onResult(gga(), 1_000L)
         val before = tracker.state
 
-        val afterGsa = tracker.onResult(
-            NmeaParseResult.Parsed(
-                GsaSentence(talker = "GP", fixType = 3, pdop = 1.8, hdop = 42.0, vdop = 1.5),
-                raw = "raw",
-            ),
-            2_000L,
-        )
+        val afterGsa =
+            tracker.onResult(
+                NmeaParseResult.Parsed(
+                    GsaSentence(talker = "GP", fixType = 3, pdop = 1.8, hdop = 42.0, vdop = 1.5),
+                    raw = "raw",
+                ),
+                2_000L,
+            )
         assertEquals(2_000L, afterGsa.lastSentenceAtMs)
         assertEquals(before.copy(lastSentenceAtMs = 2_000L), afterGsa, "GSA must change nothing but lastSentenceAtMs")
 
-        val afterGsv = tracker.onResult(
-            NmeaParseResult.Parsed(
-                GsvSentence(talker = "GP", totalMessages = 3, messageNumber = 1, satellitesInView = 11),
-                raw = "raw",
-            ),
-            3_000L,
-        )
+        val afterGsv =
+            tracker.onResult(
+                NmeaParseResult.Parsed(
+                    GsvSentence(talker = "GP", totalMessages = 3, messageNumber = 1, satellitesInView = 11),
+                    raw = "raw",
+                ),
+                3_000L,
+            )
         assertEquals(before.copy(lastSentenceAtMs = 3_000L), afterGsv, "GSV must change nothing but lastSentenceAtMs")
     }
 

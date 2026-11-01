@@ -1,9 +1,16 @@
 package io.github.mtnmanak.rocketlocator26.ui.devices
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -20,6 +27,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -33,12 +41,19 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.app.ActivityCompat
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.mtnmanak.rocketlocator26.R
@@ -65,19 +80,29 @@ fun DevicesScreen(
     val pairedDevices by viewModel.pairedDevices.collectAsStateWithLifecycle()
     val scanResults by viewModel.scanResults.collectAsStateWithLifecycle()
     val isScanning by viewModel.isScanning.collectAsStateWithLifecycle()
+    val scanError by viewModel.scanError.collectAsStateWithLifecycle()
     val telemetry by viewModel.telemetryUiState.collectAsStateWithLifecycle()
-
-    val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions(),
-    ) {
-        // Whatever the outcome, re-derive gating state; a permanent denial
-        // simply leaves the rationale card visible without re-prompting.
+    val context = LocalContext.current
+    val activity = remember(context) { context.findActivity() }
+    var needsSettings by remember { mutableStateOf(false) }
+    val refreshPermissions = {
         viewModel.refresh()
+        needsSettings =
+            viewModel.permissionNeedsSettings { permission ->
+                activity?.let { ActivityCompat.shouldShowRequestPermissionRationale(it, permission) } ?: true
+            }
     }
 
+    val permissionLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestMultiplePermissions(),
+        ) {
+            refreshPermissions()
+        }
+
     // Permissions/toggles may change in system Settings while we're paused.
-    LifecycleResumeEffect(Unit) {
-        viewModel.refresh()
+    LifecycleResumeEffect(viewModel, activity) {
+        refreshPermissions()
         onPauseOrDispose { }
     }
 
@@ -102,16 +127,29 @@ fun DevicesScreen(
         },
     ) { innerPadding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             if (!hasPermissions) {
                 PermissionCard(
-                    onGrant = { permissionLauncher.launch(viewModel.requiredPermissions()) },
+                    needsSettings = needsSettings,
+                    onGrant = {
+                        viewModel.markPermissionsRequested()
+                        permissionLauncher.launch(viewModel.requiredPermissions())
+                    },
+                    onOpenSettings = {
+                        context.startActivity(
+                            Intent(
+                                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                Uri.fromParts("package", context.packageName, null),
+                            ),
+                        )
+                    },
                 )
             }
             if (viewModel.hasBluetoothHardware && !isBluetoothEnabled) {
@@ -143,6 +181,7 @@ fun DevicesScreen(
                 hasBluetoothHardware = viewModel.hasBluetoothHardware,
                 results = scanResults,
                 isScanning = isScanning,
+                scanError = scanError,
                 scanEnabled = hasPermissions && isBluetoothEnabled && isLocationEnabled,
                 connectEnabled = canConnect,
                 onStartScan = viewModel::startBleScan,
@@ -156,7 +195,10 @@ fun DevicesScreen(
 
 /** Flags a system-level blocker (Bluetooth off, Location off) the app cannot fix itself. */
 @Composable
-private fun EnvironmentCard(title: String, body: String) {
+private fun EnvironmentCard(
+    title: String,
+    body: String,
+) {
     SectionCard(title = title) {
         Text(
             text = body,
@@ -168,14 +210,18 @@ private fun EnvironmentCard(title: String, body: String) {
 
 /** Explains why Bluetooth permissions are needed, with a grant action. */
 @Composable
-private fun PermissionCard(onGrant: () -> Unit) {
+private fun PermissionCard(
+    needsSettings: Boolean,
+    onGrant: () -> Unit,
+    onOpenSettings: () -> Unit,
+) {
     SectionCard(title = stringResource(R.string.devices_permission_title)) {
         Text(
-            text = stringResource(R.string.devices_permission_rationale),
+            text = stringResource(if (needsSettings) R.string.devices_permission_settings else R.string.devices_permission_rationale),
             style = MaterialTheme.typography.bodyMedium,
         )
-        Button(onClick = onGrant) {
-            Text(stringResource(R.string.btn_grant_permission))
+        Button(onClick = if (needsSettings) onOpenSettings else onGrant) {
+            Text(stringResource(if (needsSettings) R.string.btn_open_app_settings else R.string.btn_grant_permission))
         }
     }
 }
@@ -198,7 +244,7 @@ private fun ConnectionStatusCard(
                 modifier = Modifier.weight(1f),
             )
             if (connectionState != ConnectionState.DISCONNECTED) {
-                OutlinedButton(onClick = onDisconnect) {
+                OutlinedButton(onClick = onDisconnect, colors = devicesOutlinedButtonColors()) {
                     Text(stringResource(R.string.btn_disconnect))
                 }
             }
@@ -221,16 +267,24 @@ private fun PairedDevicesCard(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         when {
-            !hasBluetoothHardware -> EmptyHint(stringResource(R.string.devices_no_bluetooth))
-            devices.isEmpty() -> EmptyHint(stringResource(R.string.devices_none_paired))
-            else -> devices.forEach { device ->
-                DeviceRow(
-                    name = device.name,
-                    address = device.address,
-                    detail = null,
-                    connectEnabled = connectEnabled,
-                    onConnect = { onConnect(device.address, device.name) },
-                )
+            !hasBluetoothHardware -> {
+                EmptyHint(stringResource(R.string.devices_no_bluetooth))
+            }
+
+            devices.isEmpty() -> {
+                EmptyHint(stringResource(R.string.devices_none_paired))
+            }
+
+            else -> {
+                devices.forEach { device ->
+                    DeviceRow(
+                        name = device.name,
+                        address = device.address,
+                        detail = null,
+                        connectEnabled = connectEnabled,
+                        onConnect = { onConnect(device.address, device.name) },
+                    )
+                }
             }
         }
     }
@@ -242,6 +296,7 @@ private fun BleScanCard(
     hasBluetoothHardware: Boolean,
     results: List<ScannedDevice>,
     isScanning: Boolean,
+    scanError: BleScanError?,
     scanEnabled: Boolean,
     connectEnabled: Boolean,
     onStartScan: () -> Unit,
@@ -258,7 +313,7 @@ private fun BleScanCard(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             if (isScanning) {
-                OutlinedButton(onClick = onStopScan) {
+                OutlinedButton(onClick = onStopScan, colors = devicesOutlinedButtonColors()) {
                     Text(stringResource(R.string.btn_stop_scan))
                 }
                 CircularProgressIndicator(
@@ -271,7 +326,13 @@ private fun BleScanCard(
                 }
             }
         }
-        if (results.isEmpty()) {
+        if (scanError != null) {
+            Text(
+                text = stringResource(R.string.devices_scan_error, scanError.code, stringResource(scanError.messageRes)),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+            )
+        } else if (results.isEmpty()) {
             EmptyHint(stringResource(R.string.devices_no_scan_results))
         } else {
             results.forEach { device ->
@@ -310,9 +371,10 @@ private fun NmeaConsoleCard(lines: List<String>) {
             }
             LazyColumn(
                 state = listState,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(CONSOLE_HEIGHT),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(CONSOLE_HEIGHT),
             ) {
                 items(lines) { line ->
                     Text(
@@ -320,11 +382,12 @@ private fun NmeaConsoleCard(lines: List<String>) {
                         fontFamily = FontFamily.Monospace,
                         fontSize = 11.sp,
                         lineHeight = 14.sp,
-                        color = if (line.startsWith(ERROR_LINE_PREFIX)) {
-                            MaterialTheme.colorScheme.error
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
+                        color =
+                            if (line.startsWith(ERROR_LINE_PREFIX)) {
+                                MaterialTheme.colorScheme.error
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
                     )
                 }
             }
@@ -358,8 +421,12 @@ private fun DeviceRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+        val connectLabel = stringResource(R.string.btn_connect_device, deviceConnectTarget(name, address))
         Button(onClick = onConnect, enabled = connectEnabled) {
-            Text(stringResource(R.string.btn_connect))
+            Text(
+                stringResource(R.string.btn_connect),
+                modifier = Modifier.clearAndSetSemantics { contentDescription = connectLabel },
+            )
         }
     }
 }
@@ -375,9 +442,10 @@ private fun SectionCard(
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
@@ -401,3 +469,23 @@ private fun EmptyHint(text: String) {
 
 private val CONSOLE_HEIGHT = 200.dp
 private const val ERROR_LINE_PREFIX = "[error]"
+
+/** Preserve light-theme defaults; dark labels use the existing accessible text token. */
+@Composable
+private fun devicesOutlinedButtonColors() =
+    ButtonDefaults.outlinedButtonColors(
+        // WCAG sRGB luminance: (L(#F6FAFF) + .05) / (L(#123859) + .05) = 11.54:1.
+        contentColor =
+            devicesOutlinedLabelColor(
+                darkTheme = isSystemInDarkTheme(),
+                onSurface = MaterialTheme.colorScheme.onSurface,
+                defaultColor = ButtonDefaults.outlinedButtonColors().contentColor,
+            ),
+    )
+
+private tailrec fun Context.findActivity(): Activity? =
+    when (this) {
+        is Activity -> this
+        is ContextWrapper -> baseContext.findActivity()
+        else -> null
+    }

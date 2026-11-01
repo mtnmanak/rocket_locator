@@ -18,18 +18,23 @@ import kotlinx.coroutines.flow.flow
  *
  * The flow is cold: every collection replays the flight from the beginning, and
  * cancelling the collector stops playback immediately with no leaked work.
- * Pacing uses [delay], so tests can drive playback deterministically with
- * `kotlinx-coroutines-test` virtual time.
+ * Pacing uses a monotonic clock and [delay]. Tests inject the matching
+ * `kotlinx-coroutines-test` virtual clock through the internal constructor.
  *
  * @param samplesProvider supplies a fresh sample sequence per collection (cold-flow
  *   semantics require re-iterability).
  * @param timeScale playback speed multiplier: `1.0` is real time, `2.0` is twice
  *   real speed, `0.5` is half speed. Must be positive and finite.
+ * @param nowMs monotonic milliseconds; tests supply their scheduler's clock so
+ *   collector suspensions and playback delays share one time source.
  */
-class SimulatorSource(
+class SimulatorSource internal constructor(
     private val samplesProvider: () -> Sequence<SimulatedSample>,
-    private val timeScale: Double = 1.0,
+    private val timeScale: Double,
+    private val nowMs: () -> Long,
 ) : NmeaSource {
+    constructor(samplesProvider: () -> Sequence<SimulatedSample>, timeScale: Double = 1.0) :
+        this(samplesProvider, timeScale, { System.nanoTime() / 1_000_000 })
 
     constructor(flight: SyntheticFlight, timeScale: Double = 1.0) : this(flight::samples, timeScale)
 
@@ -41,23 +46,19 @@ class SimulatorSource(
 
     override val name: String = "Simulator"
 
-    override fun events(): Flow<SourceEvent> = flow {
-        emit(SourceEvent.Connected)
-        // Milliseconds of playback time already spent waiting. Accumulating our own
-        // clock (rather than reading a wall clock) keeps pacing exact under
-        // virtual-time test dispatchers and immune to collector back-pressure drift.
-        var elapsedMs = 0L
-        for (sample in samplesProvider()) {
-            val targetMs = (sample.timeOffsetMs / timeScale).toLong()
-            val waitMs = targetMs - elapsedMs
-            if (waitMs > 0) {
-                delay(waitMs)
-                elapsedMs = targetMs
+    override fun events(): Flow<SourceEvent> =
+        flow {
+            val startMs = nowMs()
+            emit(SourceEvent.Connected)
+            for (sample in samplesProvider()) {
+                val targetMs = (sample.timeOffsetMs / timeScale).toLong()
+                // Include collector work in elapsed time. Late samples never wait.
+                val elapsedMs = nowMs() - startMs
+                delay(if (targetMs > elapsedMs) targetMs - elapsedMs else 0)
+                for (sentence in sample.sentences) {
+                    emit(SourceEvent.LineReceived(raw = sentence, timestampMs = targetMs))
+                }
             }
-            for (sentence in sample.sentences) {
-                emit(SourceEvent.LineReceived(raw = sentence, timestampMs = targetMs))
-            }
+            emit(SourceEvent.Disconnected)
         }
-        emit(SourceEvent.Disconnected)
-    }
 }

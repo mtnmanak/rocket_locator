@@ -12,7 +12,6 @@ import io.github.mtnmanak.rocketlocator26.ui.theme.RocketLocatorTheme
  * [AppNav]'s NavHost, not in additional activities.
  */
 class MainActivity : ComponentActivity() {
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()

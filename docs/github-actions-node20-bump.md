@@ -16,7 +16,7 @@ broken today; when the shim is removed, every unbumped workflow fails at once.
 |---|---|---|
 | `diesel_dashboard` | `deploy.yml` | ✅ **DONE** — commit `94e7331`, 10 Aug, pushed |
 | `rocket_locator` | `ci.yml` | ✅ **DONE** — commit `67b6027`, 11 Aug, **verified green with zero annotations** |
-| `rocket_locator` | `release.yml` | ✅ **DONE** — same commit; unexercised until a `v*` tag |
+| `rocket_locator` | `release.yml` | ✅ **DONE** — same commit; ~~unexercised until a `v*` tag~~ exercised successfully by the `v0.03` tag, Release run [40612458148](https://github.com/mtnmanak/rocket_locator/actions/runs/40612458148) (2026-10-28), as recorded in `docs/handoff-2026-10-27.md` |
 | `bp_calculator` | `deploy.yml` | ⬜ TODO |
 | `motor_dashboard` | `deploy.yml` | ⬜ TODO |
 | `motor_sim` | `deploy.yml` | ⬜ TODO |

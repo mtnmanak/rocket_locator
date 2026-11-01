@@ -26,8 +26,9 @@ package io.github.mtnmanak.rocketlocator26.transport
  *   Real NMEA sentences are at most 82 characters; the generous default also
  *   tolerates vendor extensions and debug output.
  */
-class NmeaLineAssembler(private val maxLineLength: Int = 1024) {
-
+class NmeaLineAssembler(
+    private val maxLineLength: Int = 1024,
+) {
     init {
         require(maxLineLength > 0) { "maxLineLength must be positive, was $maxLineLength" }
     }
@@ -50,7 +51,10 @@ class NmeaLineAssembler(private val maxLineLength: Int = 1024) {
      * @return every line completed by this chunk, in order, without terminators;
      *   empty if no `'\n'` was seen or only blank lines were completed.
      */
-    fun feed(bytes: ByteArray, count: Int = bytes.size): List<String> {
+    fun feed(
+        bytes: ByteArray,
+        count: Int = bytes.size,
+    ): List<String> {
         require(count in 0..bytes.size) {
             "count must be in 0..${bytes.size}, was $count"
         }

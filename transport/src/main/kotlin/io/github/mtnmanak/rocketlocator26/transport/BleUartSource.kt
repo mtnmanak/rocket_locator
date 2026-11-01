@@ -4,26 +4,22 @@ import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCallback
-import android.bluetooth.BluetoothGattCharacteristic
-import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothManager
-import android.bluetooth.BluetoothProfile
-import android.bluetooth.BluetoothStatusCodes
 import android.content.Context
-import android.os.Build
 import android.os.SystemClock
-import java.io.IOException
-import java.util.UUID
-import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ProducerScope
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import java.io.IOException
+import java.util.UUID
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * An [NmeaSource] backed by a BLE "UART over GATT" link, as used by
@@ -59,6 +55,9 @@ import kotlinx.coroutines.withTimeoutOrNull
  * [SourceEvent.Disconnected], and the flow ends — the permission will not
  * appear by retrying.
  *
+ * The internal constructor substitutes the GATT link and monotonic clock for
+ * JVM tests. Both real callbacks and fakes feed the same session message channel.
+ *
  * @param context used for [BluetoothDevice.connectGatt] and to obtain the
  *   [BluetoothManager].
  * @param deviceAddress MAC address of the receiver's BLE module.
@@ -66,59 +65,75 @@ import kotlinx.coroutines.withTimeoutOrNull
  *   to [deviceAddress] when null.
  */
 @SuppressLint("MissingPermission")
-class BleUartSource(
-    private val context: Context,
-    private val deviceAddress: String,
-    deviceName: String? = null,
+class BleUartSource internal constructor(
+    deviceAddress: String,
+    deviceName: String?,
+    private val linkFactory: GattLinkFactory,
+    private val nowMs: () -> Long = { SystemClock.elapsedRealtime() },
 ) : NmeaSource {
+    constructor(
+        context: Context,
+        deviceAddress: String,
+        deviceName: String? = null,
+    ) : this(deviceAddress, deviceName, AndroidGattLinkFactory(context, deviceAddress))
 
     override val name: String = deviceName ?: deviceAddress
 
     /** Internal messages bridging [BluetoothGattCallback] into coroutine land. */
-    private sealed interface GattMessage {
+    internal sealed interface GattMessage {
         /** The ACL link is up; service discovery may begin. */
         data object LinkUp : GattMessage
 
         /** The link dropped or the connect attempt failed with [status]. */
-        data class LinkDown(val status: Int) : GattMessage
+        data class LinkDown(
+            val status: Int,
+        ) : GattMessage
 
         /** The MTU exchange finished (successfully or not — we proceed either way). */
         data object MtuChanged : GattMessage
 
         /** Service discovery finished with [status]. */
-        data class ServicesDiscovered(val status: Int) : GattMessage
+        data class ServicesDiscovered(
+            val status: Int,
+        ) : GattMessage
 
         /** The CCCD write completed (any status — we proceed either way). */
         data object DescriptorWritten : GattMessage
 
         /** One notification payload from the UART characteristic. */
-        class Data(val bytes: ByteArray) : GattMessage
+        class Data(
+            val bytes: ByteArray,
+        ) : GattMessage
     }
 
     /** Terminal, non-retryable link failure (e.g. the device is not a UART bridge). */
-    private class FatalLinkException(message: String) : Exception(message)
+    internal class FatalLinkException(
+        message: String,
+    ) : Exception(message)
 
-    override fun events(): Flow<SourceEvent> = callbackFlow {
-        val policy = ReconnectPolicy()
-        // The GATT client of the session currently in flight, so awaitClose can
-        // reach it. Sessions clear-and-close it themselves between retries; the
-        // atomic handoff ensures exactly one side closes it.
-        val activeGatt = AtomicReference<BluetoothGatt?>(null)
+    override fun events(): Flow<SourceEvent> =
+        callbackFlow {
+            val policy = ReconnectPolicy()
+            // The GATT client of the session currently in flight, so awaitClose can
+            // reach it. Sessions clear-and-close it themselves between retries; the
+            // atomic handoff ensures exactly one side closes it.
+            val activeGatt = AtomicReference<GattLink?>(null)
 
-        val supervisor = launch {
-            while (true) {
-                val fatal = runSession(activeGatt, policy)
-                if (fatal) break
-                delay(policy.nextDelayMs())
+            val supervisor =
+                launch {
+                    while (true) {
+                        val fatal = runSession(activeGatt, policy)
+                        if (fatal) break
+                        delay(policy.nextDelayMs())
+                    }
+                    close() // Terminal failure: end the flow for the collector.
+                }
+
+            awaitClose {
+                supervisor.cancel()
+                activeGatt.getAndSet(null)?.closeQuietly()
             }
-            close() // Terminal failure: end the flow for the collector.
         }
-
-        awaitClose {
-            supervisor.cancel()
-            activeGatt.getAndSet(null)?.closeQuietly()
-        }
-    }
 
     /**
      * Runs one connect-and-stream session: emits [SourceEvent.Connected] /
@@ -130,30 +145,24 @@ class BleUartSource(
      *   stop (missing permission, bad address, no UART service).
      */
     private suspend fun ProducerScope<SourceEvent>.runSession(
-        activeGatt: AtomicReference<BluetoothGatt?>,
+        activeGatt: AtomicReference<GattLink?>,
         policy: ReconnectPolicy,
     ): Boolean {
         var fatal = false
-        var gatt: BluetoothGatt? = null
+        var gatt: GattLink? = null
         val messages = Channel<GattMessage>(Channel.UNLIMITED)
         try {
-            val device = resolveDevice()
-            gatt = device.connectGatt(
-                context,
-                /* autoConnect = */ false,
-                createCallback(messages),
-                BluetoothDevice.TRANSPORT_LE,
-            ) ?: throw IOException("Unable to initiate BLE connection")
+            gatt = linkFactory.connect(messages)
             activeGatt.set(gatt)
 
             awaitLinkUp(messages)
             negotiateMtu(gatt, messages)
             val uart = discoverUartCharacteristic(gatt, messages)
-            enableNotifications(gatt, uart, messages)
+            val setupData = enableNotifications(gatt, uart, messages)
 
             send(SourceEvent.Connected)
             policy.reset()
-            pumpData(messages) // Returns only by throwing.
+            pumpData(messages, setupData) // Returns only by throwing.
         } catch (e: SecurityException) {
             send(
                 SourceEvent.SourceError(
@@ -177,94 +186,22 @@ class BleUartSource(
         return fatal
     }
 
-    /**
-     * Resolves the adapter and the remote device.
-     *
-     * @throws IOException if Bluetooth is unavailable or turned off (recoverable).
-     * @throws FatalLinkException if [deviceAddress] is not a valid MAC.
-     */
-    private fun resolveDevice(): BluetoothDevice {
-        val manager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
-        val adapter = manager?.adapter
-            ?: throw IOException("Bluetooth is not available on this device")
-        if (!adapter.isEnabled) throw IOException("Bluetooth is turned off")
-        return try {
-            adapter.getRemoteDevice(deviceAddress)
-        } catch (e: IllegalArgumentException) {
-            throw FatalLinkException("Invalid Bluetooth address \"$deviceAddress\"")
-        }
-    }
-
-    /**
-     * Builds the GATT callback that forwards framework events into [messages].
-     * `trySend` on an unlimited channel only fails once the session has closed
-     * it, at which point late callbacks are intentionally dropped.
-     */
-    private fun createCallback(messages: Channel<GattMessage>): BluetoothGattCallback =
-        object : BluetoothGattCallback() {
-            override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
-                when {
-                    status == BluetoothGatt.GATT_SUCCESS &&
-                        newState == BluetoothProfile.STATE_CONNECTED ->
-                        messages.trySend(GattMessage.LinkUp)
-
-                    newState == BluetoothProfile.STATE_DISCONNECTED ||
-                        status != BluetoothGatt.GATT_SUCCESS ->
-                        messages.trySend(GattMessage.LinkDown(status))
-                }
-            }
-
-            override fun onMtuChanged(gatt: BluetoothGatt, mtu: Int, status: Int) {
-                messages.trySend(GattMessage.MtuChanged)
-            }
-
-            override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
-                messages.trySend(GattMessage.ServicesDiscovered(status))
-            }
-
-            override fun onDescriptorWrite(
-                gatt: BluetoothGatt,
-                descriptor: BluetoothGattDescriptor,
-                status: Int,
-            ) {
-                messages.trySend(GattMessage.DescriptorWritten)
-            }
-
-            // API 33+ delivers the payload directly.
-            override fun onCharacteristicChanged(
-                gatt: BluetoothGatt,
-                characteristic: BluetoothGattCharacteristic,
-                value: ByteArray,
-            ) {
-                if (characteristic.uuid == UART_CHARACTERISTIC_UUID) {
-                    messages.trySend(GattMessage.Data(value.copyOf()))
-                }
-            }
-
-            // Pre-33 devices only invoke this deprecated overload.
-            @Deprecated("Deprecated in Java")
-            @Suppress("DEPRECATION")
-            override fun onCharacteristicChanged(
-                gatt: BluetoothGatt,
-                characteristic: BluetoothGattCharacteristic,
-            ) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) return // 33+ overload handles it.
-                if (characteristic.uuid != UART_CHARACTERISTIC_UUID) return
-                val value = characteristic.value ?: return
-                messages.trySend(GattMessage.Data(value.copyOf()))
-            }
-        }
-
     /** Waits for the ACL link to come up, tolerating stale queued messages. */
     private suspend fun awaitLinkUp(messages: ReceiveChannel<GattMessage>) {
         while (true) {
-            val message = withTimeoutOrNull(CONNECT_TIMEOUT_MS) { messages.receive() }
-                ?: throw IOException("Timed out connecting to $name")
+            val message =
+                withTimeoutOrNull(CONNECT_TIMEOUT_MS) { messages.receive() }
+                    ?: throw IOException("Timed out connecting to $name")
             when (message) {
-                GattMessage.LinkUp -> return
-                is GattMessage.LinkDown ->
+                GattMessage.LinkUp -> {
+                    return
+                }
+
+                is GattMessage.LinkDown -> {
                     throw IOException("BLE connection failed (status ${message.status})")
-                else -> Unit
+                }
+
+                else -> {}
             }
         }
     }
@@ -274,15 +211,23 @@ class BleUartSource(
      * service discovery, but proceeds regardless of the result — a failed or
      * silent negotiation just leaves the default 23-byte MTU in place.
      */
-    private suspend fun negotiateMtu(gatt: BluetoothGatt, messages: ReceiveChannel<GattMessage>) {
+    private suspend fun negotiateMtu(
+        gatt: GattLink,
+        messages: ReceiveChannel<GattMessage>,
+    ) {
         if (!gatt.requestMtu(REQUESTED_MTU)) return
         while (true) {
             val message = withTimeoutOrNull(MTU_TIMEOUT_MS) { messages.receive() } ?: return
             when (message) {
-                GattMessage.MtuChanged -> return
-                is GattMessage.LinkDown ->
+                GattMessage.MtuChanged -> {
+                    return
+                }
+
+                is GattMessage.LinkDown -> {
                     throw IOException("BLE link lost during MTU exchange (status ${message.status})")
-                else -> Unit
+                }
+
+                else -> {}
             }
         }
     }
@@ -294,13 +239,14 @@ class BleUartSource(
      *   — it is not a transparent-UART bridge and retrying cannot change that.
      */
     private suspend fun discoverUartCharacteristic(
-        gatt: BluetoothGatt,
+        gatt: GattLink,
         messages: ReceiveChannel<GattMessage>,
-    ): BluetoothGattCharacteristic {
+    ): GattCharacteristic {
         if (!gatt.discoverServices()) throw IOException("Failed to start GATT service discovery")
         while (true) {
-            val message = withTimeoutOrNull(DISCOVERY_TIMEOUT_MS) { messages.receive() }
-                ?: throw IOException("Timed out discovering GATT services")
+            val message =
+                withTimeoutOrNull(DISCOVERY_TIMEOUT_MS) { messages.receive() }
+                    ?: throw IOException("Timed out discovering GATT services")
             when (message) {
                 is GattMessage.ServicesDiscovered -> {
                     if (message.status != BluetoothGatt.GATT_SUCCESS) {
@@ -310,9 +256,12 @@ class BleUartSource(
                     return service?.getCharacteristic(UART_CHARACTERISTIC_UUID)
                         ?: throw FatalLinkException("Device has no FFE0/FFE1 UART service")
                 }
-                is GattMessage.LinkDown ->
+
+                is GattMessage.LinkDown -> {
                     throw IOException("BLE link lost during service discovery (status ${message.status})")
-                else -> Unit
+                }
+
+                else -> {}
             }
         }
     }
@@ -321,35 +270,34 @@ class BleUartSource(
      * Enables notifications on the UART characteristic. The CCCD descriptor is
      * written when present, but its absence — and even a failed write — is
      * tolerated: many HM-10/BT-04 clones notify without it.
+     * Early notification fragments are retained in order for the streaming assembler.
      */
     private suspend fun enableNotifications(
-        gatt: BluetoothGatt,
-        characteristic: BluetoothGattCharacteristic,
+        gatt: GattLink,
+        characteristic: GattCharacteristic,
         messages: ReceiveChannel<GattMessage>,
-    ) {
+    ): List<ByteArray> {
         if (!gatt.setCharacteristicNotification(characteristic, true)) {
             throw IOException("Failed to enable notifications on the UART characteristic")
         }
-        val cccd = characteristic.getDescriptor(CCCD_UUID) ?: return
-        val writeStarted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            gatt.writeDescriptor(cccd, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE) ==
-                BluetoothStatusCodes.SUCCESS
-        } else {
-            @Suppress("DEPRECATION")
-            cccd.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
-            @Suppress("DEPRECATION")
-            gatt.writeDescriptor(cccd)
-        }
-        if (!writeStarted) return
-        while (true) {
-            val message = withTimeoutOrNull(DESCRIPTOR_TIMEOUT_MS) { messages.receive() } ?: return
+        val cccd = characteristic.getDescriptor(CCCD_UUID) ?: return emptyList()
+        val writeStarted = gatt.writeDescriptor(cccd)
+        if (!writeStarted) return emptyList()
+        return awaitSetupCompletion(messages, DESCRIPTOR_TIMEOUT_MS) { message ->
             when (message) {
-                GattMessage.DescriptorWritten -> return
-                is GattMessage.LinkDown ->
+                GattMessage.DescriptorWritten -> {
+                    true
+                }
+
+                is GattMessage.LinkDown -> {
                     throw IOException("BLE link lost while enabling notifications (status ${message.status})")
-                else -> Unit // Early Data fragments are dropped; NMEA repeats every second.
+                }
+
+                else -> {
+                    false
+                }
             }
-        }
+        }.filterIsInstance<GattMessage.Data>().map { it.bytes }
     }
 
     /**
@@ -357,25 +305,37 @@ class BleUartSource(
      * Throws [IOException] on remote disconnect or when the watchdog sees no
      * bytes for [WATCHDOG_TIMEOUT_MS].
      */
-    private suspend fun ProducerScope<SourceEvent>.pumpData(messages: ReceiveChannel<GattMessage>) {
+    private suspend fun ProducerScope<SourceEvent>.pumpData(
+        messages: ReceiveChannel<GattMessage>,
+        setupData: List<ByteArray>,
+    ) {
         val assembler = NmeaLineAssembler()
+
+        suspend fun emitLines(bytes: ByteArray) {
+            for (line in assembler.feed(bytes)) {
+                send(SourceEvent.LineReceived(line, nowMs()))
+            }
+        }
+        for (bytes in setupData) emitLines(bytes)
         while (true) {
-            val message = withTimeoutOrNull(WATCHDOG_TIMEOUT_MS) { messages.receive() }
-                ?: throw IOException("No data received for ${WATCHDOG_TIMEOUT_MS / 1000} s (watchdog)")
+            val message =
+                withTimeoutOrNull(WATCHDOG_TIMEOUT_MS) { messages.receive() }
+                    ?: throw IOException("No data received for ${WATCHDOG_TIMEOUT_MS / 1000} s (watchdog)")
             when (message) {
                 is GattMessage.Data -> {
-                    for (line in assembler.feed(message.bytes)) {
-                        send(SourceEvent.LineReceived(line, SystemClock.elapsedRealtime()))
-                    }
+                    emitLines(message.bytes)
                 }
-                is GattMessage.LinkDown ->
+
+                is GattMessage.LinkDown -> {
                     throw IOException("BLE device disconnected (status ${message.status})")
-                else -> Unit
+                }
+
+                else -> {}
             }
         }
     }
 
-    private fun BluetoothGatt.closeQuietly() {
+    private fun GattLink.closeQuietly() {
         try {
             close()
         } catch (_: SecurityException) {
@@ -383,7 +343,7 @@ class BleUartSource(
         }
     }
 
-    private companion object {
+    internal companion object {
         /** HM-10/BT-04-style transparent UART service. */
         val UART_SERVICE_UUID: UUID = UUID.fromString("0000ffe0-0000-1000-8000-00805f9b34fb")
 
@@ -407,4 +367,26 @@ class BleUartSource(
         /** Reconnect if the link is up but silent this long (receivers talk at 1 Hz). */
         const val WATCHDOG_TIMEOUT_MS = 7_000L
     }
+}
+
+/**
+ * Uses one deadline for setup, retaining messages before completion (or timeout)
+ * so early telemetry can be replayed in order after Connected. The predicate may
+ * throw on link loss; cancellation and channel failures propagate to session cleanup.
+ */
+internal suspend fun <T> awaitSetupCompletion(
+    messages: ReceiveChannel<T>,
+    timeoutMs: Long,
+    isComplete: (T) -> Boolean,
+): List<T> {
+    val pending = mutableListOf<T>()
+    withTimeoutOrNull(timeoutMs) {
+        while (true) {
+            ensureActive()
+            val message = messages.receive()
+            if (isComplete(message)) break
+            pending += message
+        }
+    }
+    return pending
 }

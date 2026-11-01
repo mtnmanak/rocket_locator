@@ -20,7 +20,6 @@ class ReconnectPolicy(
     private val initialDelayMs: Long = 1_000,
     private val maxDelayMs: Long = 15_000,
 ) {
-
     init {
         require(initialDelayMs > 0) { "initialDelayMs must be positive, was $initialDelayMs" }
         require(maxDelayMs >= initialDelayMs) {
@@ -33,7 +32,8 @@ class ReconnectPolicy(
     /** Returns the delay to wait before the next attempt, then doubles it (capped). */
     fun nextDelayMs(): Long {
         val delayMs = nextDelayMs
-        nextDelayMs = (delayMs * 2).coerceAtMost(maxDelayMs)
+        // Compare before multiplying so even a Long.MAX_VALUE cap cannot overflow.
+        nextDelayMs = if (delayMs > maxDelayMs / 2) maxDelayMs else delayMs * 2
         return delayMs
     }
 

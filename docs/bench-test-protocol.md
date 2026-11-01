@@ -6,7 +6,7 @@ Goal: validate the Phase 2 exit criterion — **live NMEA streaming from real ha
 
 - Eggfinder RX or LCD receiver with the Bluetooth module installed, powered
 - Eggfinder TX (or Mini/TRS) transmitter, powered, ideally near a window so it gets GPS lock
-- Android phone with `app-debug.apk` (v0.02) sideloaded
+- Android phone with ~~`app-debug.apk` (v0.02) sideloaded~~ the release-signed APK installed: `rocket-locator-26.apk` from the latest Release, or a local `:app:assembleRelease` signed with the release key; use `adb install -r`. Never uninstall (it wipes data); a debug-signed build cannot install over the release-signed app.
 - Optional: a second person's patience
 
 ## 1. Identify which Bluetooth module you have
@@ -49,8 +49,15 @@ Run each; the app must recover **by itself** — no restarts, no crashes:
 | R4 | Screen off / phone in pocket 5 min while connected | Notification stays; on unlock, console has continued (no gap at the end) |
 | R5 | Switch to another app for 5 min | Same as R4 |
 | R6 | Tap Disconnect in the notification | Service + notification gone, status Disconnected, last data still displayed |
-| R7 | Kill the app from recents while connected | Service should die with it; relaunch shows last state, no crash |
-| R8 | Connect with TX **on and locked**, confirm Home readouts | Lat/lon plausible (check against a maps app), altitude ≈ your elevation, sats ≥ 4 |
+| R7a | ~~Kill the app from recents while connected~~ Swipe the app task away from recents while connected | ~~Service should die with it; relaunch shows last state, no crash~~ Task dismissal does not intentionally disconnect telemetry; while the process survives, reopening displays its existing state. Record service, notification and telemetry behavior on the tested device. |
+| R7b | Separately kill the process and relaunch | No crash; position lost after process death — known gap. Today the last position is in memory only and does not survive process death; Phase 3 adds persistence. Bluetooth does not automatically reconnect. |
+| R8 | Connect with TX **on and locked**, confirm Home readouts | Lat/lon plausible (check against a maps app), ~~altitude ≈ your elevation~~ altitude AGL ≈ 0 m after the first valid GGA altitude while stationary; compare local MSL elevation only via the console/raw GGA altitude field, sats ≥ 4 |
+| R9 | Obtain a measured fix, turn TX **off**, then Disconnect and Connect again with TX still off; wait at least 10 s after the last valid fix | Position is kept through reconnect and shown as **Last known position**; fix age continues increasing without incoming fixes, and the fix is stale after 10 s |
+| R10 | With a position held, tap **New flight** and **Cancel**; repeat and confirm | Cancel keeps position and flight data; confirmation clears them |
+| R11 | With a real position held, tap **Run simulator**; cancel, then repeat and confirm | Confirmation is required before replacing real data; cancel keeps it, while confirmation performs New flight before starting the simulator |
+| R12 | On Android 12+, deny **Nearby devices** twice, tap **Open app settings**, grant permission, then return to the app | Settings opens for this app; on resume the permission card clears and paired-device connection / BLE scanning works without restarting the app |
+| R13 | Enable TalkBack, connect, interrupt the receiver link to trigger retry, then withhold valid fixes for at least 10 s; focus device Connect buttons too | TalkBack announces **Connected**, **Connecting** and the stale / last-known position change; each device Connect button names its device or address |
+| R14 | If a module reporting dead reckoning is available, obtain a measured fix, then feed dead-reckoning fixes (GGA quality 6 or RMC/GLL mode E); otherwise record not tested | The measured position is kept; rejected fixes do not refresh fix age, and the position becomes stale after 10 s without a measured fix |
 
 ## 5. Capture for me
 

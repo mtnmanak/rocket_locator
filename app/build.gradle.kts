@@ -2,7 +2,6 @@ import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
 }
 
@@ -19,15 +18,16 @@ fun signingValue(propKey: String, envKey: String): String? =
 
 android {
     namespace = "io.github.mtnmanak.rocketlocator26"
-    compileSdk = 35
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "io.github.mtnmanak.rocketlocator26"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
         // Beta versioning: versionName 0.NN, versionCode = NN (see CHANGELOG.md)
         versionCode = 3
         versionName = "0.03"
+        resValue("string", "footer_version", "v${versionName} beta")
     }
 
     signingConfigs {
@@ -54,18 +54,30 @@ android {
         }
     }
 
+    // AGP 9 creates unit-test tasks late; configure JUnit 5 through the DSL so it also holds
+    // under the configuration cache (a top-level tasks.withType<Test> block was missed there).
+    testOptions {
+        unitTests.all {
+            it.useJUnitPlatform()
+            it.failOnNoDiscoveredTests.set(true) // a silently empty test run must fail the build
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions {
-        jvmTarget = "17"
-    }
 
     buildFeatures {
         compose = true
+        resValues = true // footer_version is generated from versionName (AGP 9 defaults this off)
+    }
+
+    lint {
+        abortOnError = true
     }
 }
+
 
 dependencies {
     implementation(project(":core"))
@@ -77,8 +89,19 @@ dependencies {
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.material.icons.core)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.kotlinx.coroutines.android)
+
+    testImplementation(libs.junit.jupiter)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testRuntimeOnly(libs.junit.platform.launcher)
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
 }
