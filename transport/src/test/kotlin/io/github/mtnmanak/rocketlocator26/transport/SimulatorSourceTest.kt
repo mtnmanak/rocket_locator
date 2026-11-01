@@ -2,8 +2,10 @@ package io.github.mtnmanak.rocketlocator26.transport
 
 import io.github.mtnmanak.rocketlocator26.core.sim.SimulatedSample
 import io.github.mtnmanak.rocketlocator26.core.sim.SyntheticFlight
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.currentTime
 import kotlinx.coroutines.test.runTest
@@ -22,6 +24,12 @@ class SimulatorSourceTest {
     private fun flightOf(vararg samples: SimulatedSample): () -> Sequence<SimulatedSample> =
         { samples.asSequence() }
 
+    // Absolute pacing must read the same clock that drives delay in these tests.
+    private fun TestScope.source(
+        flight: () -> Sequence<SimulatedSample>,
+        timeScale: Double = 1.0,
+    ): SimulatorSource = SimulatorSource(flight, timeScale, nowMs = { currentTime })
+
     // ---------------------------------------------------------------- ordering
 
     @Test
@@ -31,7 +39,7 @@ class SimulatorSourceTest {
             SimulatedSample(timeOffsetMs = 1000, sentences = listOf(rmc)),
         )
 
-        val events = SimulatorSource(flight).events().toList()
+        val events = source(flight).events().toList()
 
         assertEquals(SourceEvent.Connected, events.first())
         assertEquals(SourceEvent.Disconnected, events.last())
@@ -47,7 +55,7 @@ class SimulatorSourceTest {
             SimulatedSample(timeOffsetMs = 2000, sentences = listOf(rmc, gga)),
         )
 
-        val lines = SimulatorSource(flight).events()
+        val lines = source(flight).events()
             .toList()
             .filterIsInstance<SourceEvent.LineReceived>()
 
@@ -57,7 +65,7 @@ class SimulatorSourceTest {
 
     @Test
     fun `empty flight emits Connected then Disconnected with no delay`() = runTest {
-        val events = SimulatorSource(flightOf()).events().toList()
+        val events = source(flightOf()).events().toList()
 
         assertEquals(listOf<SourceEvent>(SourceEvent.Connected, SourceEvent.Disconnected), events)
         assertEquals(0L, currentTime)
@@ -74,7 +82,7 @@ class SimulatorSourceTest {
         )
 
         val arrivals = mutableListOf<Pair<SourceEvent, Long>>()
-        SimulatorSource(flight).events().collect { arrivals += it to currentTime }
+        source(flight).events().collect { arrivals += it to currentTime }
 
         assertEquals(SourceEvent.Connected to 0L, arrivals[0])
         assertEquals(SourceEvent.LineReceived(gga, 0L) to 0L, arrivals[1])
@@ -92,7 +100,7 @@ class SimulatorSourceTest {
         )
 
         val arrivals = mutableListOf<Pair<SourceEvent, Long>>()
-        SimulatorSource(flight, timeScale = 10.0).events().collect { arrivals += it to currentTime }
+        source(flight, timeScale = 10.0).events().collect { arrivals += it to currentTime }
 
         assertEquals(SourceEvent.LineReceived(gga, 100L) to 100L, arrivals[1])
         assertEquals(SourceEvent.LineReceived(rmc, 500L) to 500L, arrivals[2])
@@ -104,7 +112,7 @@ class SimulatorSourceTest {
         val flight = flightOf(SimulatedSample(timeOffsetMs = 1000, sentences = listOf(gga)))
 
         val arrivals = mutableListOf<Pair<SourceEvent, Long>>()
-        SimulatorSource(flight, timeScale = 0.5).events().collect { arrivals += it to currentTime }
+        source(flight, timeScale = 0.5).events().collect { arrivals += it to currentTime }
 
         assertEquals(SourceEvent.LineReceived(gga, 2000L) to 2000L, arrivals[1])
         assertEquals(2000L, currentTime)
@@ -114,7 +122,7 @@ class SimulatorSourceTest {
     fun `fractional scaled offsets truncate toward zero`() = runTest {
         val flight = flightOf(SimulatedSample(timeOffsetMs = 1000, sentences = listOf(gga)))
 
-        val lines = SimulatorSource(flight, timeScale = 3.0).events()
+        val lines = source(flight, timeScale = 3.0).events()
             .toList()
             .filterIsInstance<SourceEvent.LineReceived>()
 
@@ -131,7 +139,7 @@ class SimulatorSourceTest {
         )
 
         val arrivals = mutableListOf<Pair<SourceEvent, Long>>()
-        SimulatorSource(flight).events().collect { arrivals += it to currentTime }
+        source(flight).events().collect { arrivals += it to currentTime }
 
         assertEquals(SourceEvent.LineReceived(gga, 1000L) to 1000L, arrivals[1])
         assertEquals(SourceEvent.LineReceived(rmc, 1000L) to 1000L, arrivals[2])
@@ -145,7 +153,7 @@ class SimulatorSourceTest {
             SimulatedSample(timeOffsetMs = 1000, sentences = listOf(rmc)),
         )
 
-        val events = SimulatorSource(flight).events().toList()
+        val events = source(flight).events().toList()
 
         assertEquals(
             listOf(gga, rmc),
@@ -154,6 +162,63 @@ class SimulatorSourceTest {
         assertEquals(SourceEvent.Disconnected, events.last())
         // The earlier-offset sample must not add time on top of the 2000 ms mark.
         assertEquals(2000L, currentTime)
+    }
+
+    @Test
+    fun `collector taking 250 ms per line does not accumulate pacing drift`() = runTest {
+        val flight = flightOf(
+            SimulatedSample(timeOffsetMs = 0, sentences = listOf(gga)),
+            SimulatedSample(timeOffsetMs = 1000, sentences = listOf(rmc)),
+            SimulatedSample(timeOffsetMs = 2000, sentences = listOf(gga)),
+        )
+        val arrivals = mutableListOf<Long>()
+
+        source(flight).events().collect {
+            if (it is SourceEvent.LineReceived) {
+                arrivals += currentTime
+                delay(250)
+            }
+        }
+
+        assertEquals(listOf(0L, 1000L, 2000L), arrivals)
+    }
+
+    @Test
+    fun `collector slower than the sample interval delivers overdue lines immediately`() = runTest {
+        val flight = flightOf(
+            SimulatedSample(timeOffsetMs = 0, sentences = listOf(gga)),
+            SimulatedSample(timeOffsetMs = 1000, sentences = listOf(rmc)),
+            SimulatedSample(timeOffsetMs = 2000, sentences = listOf(gga)),
+        )
+        val arrivals = mutableListOf<Long>()
+
+        source(flight).events().collect {
+            if (it is SourceEvent.LineReceived) {
+                arrivals += currentTime
+                delay(1500)
+            }
+        }
+
+        assertEquals(listOf(0L, 1500L, 3000L), arrivals)
+    }
+
+    @Test
+    fun `Connected collector time counts from the start of collection`() = runTest {
+        val flight = flightOf(
+            SimulatedSample(timeOffsetMs = 0, sentences = listOf(gga)),
+            SimulatedSample(timeOffsetMs = 1000, sentences = listOf(rmc)),
+        )
+        val arrivals = mutableListOf<Long>()
+
+        source(flight).events().collect {
+            when (it) {
+                SourceEvent.Connected -> delay(250)
+                is SourceEvent.LineReceived -> arrivals += currentTime
+                else -> Unit
+            }
+        }
+
+        assertEquals(listOf(250L, 1000L), arrivals)
     }
 
     // ------------------------------------------------------------- cancellation
@@ -165,7 +230,7 @@ class SimulatorSourceTest {
             SimulatedSample(timeOffsetMs = 10_000, sentences = listOf(rmc)),
         )
         val events = mutableListOf<SourceEvent>()
-        val job = launch { SimulatorSource(flight).events().collect { events += it } }
+        val job = launch { source(flight).events().collect { events += it } }
 
         advanceTimeBy(5000) // past the first sample, well before the second
         job.cancel()
@@ -191,7 +256,7 @@ class SimulatorSourceTest {
             SimulatedSample(timeOffsetMs = 500, sentences = listOf(gga)),
             SimulatedSample(timeOffsetMs = 1500, sentences = listOf(rmc)),
         )
-        val source = SimulatorSource(flight)
+        val source = source(flight)
 
         val first = source.events().toList()
         val timeAfterFirst = currentTime

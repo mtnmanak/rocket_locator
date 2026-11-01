@@ -20,6 +20,7 @@ import kotlinx.coroutines.channels.ProducerScope
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.launch
@@ -149,11 +150,11 @@ class BleUartSource(
             awaitLinkUp(messages)
             negotiateMtu(gatt, messages)
             val uart = discoverUartCharacteristic(gatt, messages)
-            enableNotifications(gatt, uart, messages)
+            val setupData = enableNotifications(gatt, uart, messages)
 
             send(SourceEvent.Connected)
             policy.reset()
-            pumpData(messages) // Returns only by throwing.
+            pumpData(messages, setupData) // Returns only by throwing.
         } catch (e: SecurityException) {
             send(
                 SourceEvent.SourceError(
@@ -321,16 +322,17 @@ class BleUartSource(
      * Enables notifications on the UART characteristic. The CCCD descriptor is
      * written when present, but its absence — and even a failed write — is
      * tolerated: many HM-10/BT-04 clones notify without it.
+     * Early notification fragments are retained in order for the streaming assembler.
      */
     private suspend fun enableNotifications(
         gatt: BluetoothGatt,
         characteristic: BluetoothGattCharacteristic,
         messages: ReceiveChannel<GattMessage>,
-    ) {
+    ): List<ByteArray> {
         if (!gatt.setCharacteristicNotification(characteristic, true)) {
             throw IOException("Failed to enable notifications on the UART characteristic")
         }
-        val cccd = characteristic.getDescriptor(CCCD_UUID) ?: return
+        val cccd = characteristic.getDescriptor(CCCD_UUID) ?: return emptyList()
         val writeStarted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             gatt.writeDescriptor(cccd, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE) ==
                 BluetoothStatusCodes.SUCCESS
@@ -340,16 +342,15 @@ class BleUartSource(
             @Suppress("DEPRECATION")
             gatt.writeDescriptor(cccd)
         }
-        if (!writeStarted) return
-        while (true) {
-            val message = withTimeoutOrNull(DESCRIPTOR_TIMEOUT_MS) { messages.receive() } ?: return
+        if (!writeStarted) return emptyList()
+        return awaitSetupCompletion(messages, DESCRIPTOR_TIMEOUT_MS) { message ->
             when (message) {
-                GattMessage.DescriptorWritten -> return
+                GattMessage.DescriptorWritten -> true
                 is GattMessage.LinkDown ->
                     throw IOException("BLE link lost while enabling notifications (status ${message.status})")
-                else -> Unit // Early Data fragments are dropped; NMEA repeats every second.
+                else -> false
             }
-        }
+        }.filterIsInstance<GattMessage.Data>().map { it.bytes }
     }
 
     /**
@@ -357,17 +358,22 @@ class BleUartSource(
      * Throws [IOException] on remote disconnect or when the watchdog sees no
      * bytes for [WATCHDOG_TIMEOUT_MS].
      */
-    private suspend fun ProducerScope<SourceEvent>.pumpData(messages: ReceiveChannel<GattMessage>) {
+    private suspend fun ProducerScope<SourceEvent>.pumpData(
+        messages: ReceiveChannel<GattMessage>,
+        setupData: List<ByteArray>,
+    ) {
         val assembler = NmeaLineAssembler()
+        suspend fun emitLines(bytes: ByteArray) {
+            for (line in assembler.feed(bytes)) {
+                send(SourceEvent.LineReceived(line, SystemClock.elapsedRealtime()))
+            }
+        }
+        for (bytes in setupData) emitLines(bytes)
         while (true) {
             val message = withTimeoutOrNull(WATCHDOG_TIMEOUT_MS) { messages.receive() }
                 ?: throw IOException("No data received for ${WATCHDOG_TIMEOUT_MS / 1000} s (watchdog)")
             when (message) {
-                is GattMessage.Data -> {
-                    for (line in assembler.feed(message.bytes)) {
-                        send(SourceEvent.LineReceived(line, SystemClock.elapsedRealtime()))
-                    }
-                }
+                is GattMessage.Data -> emitLines(message.bytes)
                 is GattMessage.LinkDown ->
                     throw IOException("BLE device disconnected (status ${message.status})")
                 else -> Unit
@@ -407,4 +413,26 @@ class BleUartSource(
         /** Reconnect if the link is up but silent this long (receivers talk at 1 Hz). */
         const val WATCHDOG_TIMEOUT_MS = 7_000L
     }
+}
+
+/**
+ * Uses one deadline for setup, retaining messages before completion (or timeout)
+ * so early telemetry can be replayed in order after Connected. The predicate may
+ * throw on link loss; cancellation and channel failures propagate to session cleanup.
+ */
+internal suspend fun <T> awaitSetupCompletion(
+    messages: ReceiveChannel<T>,
+    timeoutMs: Long,
+    isComplete: (T) -> Boolean,
+): List<T> {
+    val pending = mutableListOf<T>()
+    withTimeoutOrNull(timeoutMs) {
+        while (true) {
+            ensureActive()
+            val message = messages.receive()
+            if (isComplete(message)) break
+            pending += message
+        }
+    }
+    return pending
 }

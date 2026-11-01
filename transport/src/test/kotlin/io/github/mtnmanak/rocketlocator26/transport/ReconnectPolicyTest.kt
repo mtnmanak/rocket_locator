@@ -1,7 +1,9 @@
 package io.github.mtnmanak.rocketlocator26.transport
 
+import org.junit.jupiter.api.Assertions.assertAll
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class ReconnectPolicyTest {
@@ -43,6 +45,40 @@ class ReconnectPolicyTest {
         val delays = List(5) { policy.nextDelayMs() }
 
         assertEquals(listOf(500L, 1_000L, 2_000L, 3_000L, 3_000L), delays)
+    }
+
+    @Test
+    fun R2C004_reconnectPolicyOverflow_staysPositiveAndCapped() {
+        val initialDelayMs = 1L shl 62
+        val maxDelayMs = Long.MAX_VALUE
+        val policy = ReconnectPolicy(initialDelayMs = initialDelayMs, maxDelayMs = maxDelayMs)
+        // Inspect returned millisecond values only; never wait or exercise a radio.
+        val delays = List(4) { policy.nextDelayMs() }
+        assertAll(
+            { assertTrue(delays.all { it > 0L && it <= maxDelayMs }, "Positive capped delays required: $delays ms") },
+            { assertEquals(listOf(initialDelayMs, maxDelayMs, maxDelayMs, maxDelayMs), delays,
+                "Doubling must saturate at the cap before Long overflow") },
+        )
+    }
+
+    @Test
+    fun `doubling at half of Long MAX stays exact then saturates`() {
+        val initialDelayMs = Long.MAX_VALUE / 2
+        val policy = ReconnectPolicy(initialDelayMs = initialDelayMs, maxDelayMs = Long.MAX_VALUE)
+
+        assertEquals(
+            listOf(initialDelayMs, Long.MAX_VALUE - 1, Long.MAX_VALUE, Long.MAX_VALUE),
+            List(4) { policy.nextDelayMs() },
+        )
+        policy.reset()
+        assertEquals(initialDelayMs, policy.nextDelayMs())
+    }
+
+    @Test
+    fun `Long MAX initial delay stays capped`() {
+        val policy = ReconnectPolicy(initialDelayMs = Long.MAX_VALUE, maxDelayMs = Long.MAX_VALUE)
+
+        assertEquals(List(4) { Long.MAX_VALUE }, List(4) { policy.nextDelayMs() })
     }
 
     @Test
