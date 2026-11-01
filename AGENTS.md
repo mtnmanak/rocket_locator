@@ -99,14 +99,17 @@ promo-page decision with Claude for Eric before redesigning site/deploy/.
 
 ## Commands and checks
 
-Authorized builds require JDK 17 and Android SDK 35. JAVA_HOME must be exported; the desktop path in the
+Authorized builds require JDK 17 and Android SDK ~~35~~ platform 37. JAVA_HOME must be exported; the desktop path in the
 audit prompt is /c/Users/Eric/tools/jdk17 (Eric's example); on another machine, locate the local JDK 17 and verify it exists and reports Java 17 with `java -version` before use. In a Bash environment:
 
 ```bash
 export JAVA_HOME=/c/Users/Eric/tools/jdk17 # Eric's example; on another machine, use the verified local JDK 17 path
-./gradlew :core:test :transport:test
+./gradlew :core:test :transport:test :app:testDebugUnitTest
 ./gradlew :app:assembleDebug
 ```
+
+Measured by the orchestrator on 2026-11-01: **354 unique** = 282 `:core` + 43 `:transport` + 29 `:app`; 0 failures.
+Every test task fails if it discovers no tests.
 
 Never run Gradle in parallel with another Gradle build. The Codex sandbox may prevent Gradle execution or
 build outputs. Report the actual blocker and the checks Claude must run; do not claim a pass.
@@ -117,7 +120,8 @@ files and secrets even when a source document describes a broader procedure.
 
 Record exact commands and their exit status. Stale JUnit XML after a failed Gradle run is not a fresh pass.
 Do not use a piped log's exit status as the test process's status. Distinguish unique tests from reported tests:
-:transport reports two variants. Do not copy an old test count forward as a new measurement.
+~~:transport reports two variants.~~ `:transport` now runs only its debug unit tests under AGP 9, so reported = unique.
+Do not copy an old test count forward as a new measurement.
 
 ## Testing and review discipline
 

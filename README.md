@@ -12,7 +12,7 @@ Security issues: see [SECURITY.md](SECURITY.md) — please don't file them as pu
 
 ## How it works
 
-Your rocket carries a GPS transmitter. A handheld RF receiver picks up its telemetry and relays standard NMEA sentences to your phone over Bluetooth. ~~This app turns that stream into recovery guidance:~~ **v0.03** provides a live telemetry dashboard, Devices with Classic SPP + BLE UART, a simulator, and a foreground tracking service. Recovery features are **planned (Phases 3–5)**:
+Your rocket carries a GPS transmitter. A handheld RF receiver picks up its telemetry and relays standard NMEA sentences to your phone over Bluetooth. ~~This app turns that stream into recovery guidance:~~ **v0.03** provides a live telemetry dashboard, Devices with Classic SPP + BLE UART, a simulator, and a foreground tracking service. **Since v0.03, unreleased:** fix age and an explicit last-known state after 10 s without a valid fix; Connect keeps the last known position, with confirmed **New flight** as the only reset; only measured fixes move the rocket (dead reckoning, manual and simulated receiver fixes do not). Recovery features are **planned (Phases 3–5)**:
 
 - **Recovery compass** — **planned (Phase 3)**: arrow to the rocket, distance, and accelerating "radar beep"; works with **no map data and no cell coverage**
 - **Live map** — **planned (Phase 4; offline maps Phase 5)**: rocket position, flight path, and a line from you to the rocket (offline maps downloadable before launch day)

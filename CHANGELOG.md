@@ -4,6 +4,30 @@ All notable changes to GPS Rocket Locator '26 are documented here.
 
 Beta versioning: `0.NN` (versionCode = NN) until the first production release (1.0).
 
+## [Unreleased]
+
+### Fixed
+
+- Connect keeps the last known rocket position; confirmed **New flight** is the only reset, and **Run simulator** asks first when a real position is held.
+- Fix age updates with time, and a fix becomes stale after 10 s with an explicit last-known state.
+- Only measured fixes move the rocket; dead reckoning, manual and simulated receiver fixes do not.
+- Altitude plausibility checks prevent a single altitude glitch from setting the maximum.
+- Stricter NMEA field parsing rejects malformed telemetry while preserving the last accepted position.
+- Permanently denied Bluetooth permissions offer **Open app settings**, with permission state refreshed on return.
+- BLE scan errors explain what happened and how to retry.
+- TalkBack labels identify device Connect buttons and announce connection and stale-position changes.
+- Devices screen outlined buttons have improved contrast in dark theme.
+- Simulator pacing accounts for processing time to keep playback steady.
+
+### Changed
+
+- Upgraded to Gradle 9.8.2, AGP 9.5.0 and Kotlin 2.4.21, with compileSdk 37 / targetSdk 36; builds require Android SDK platform 37 and JDK 17.
+
+### Security
+
+- Hardened CI with pinned actions, release checks and checksum-verified tooling.
+- Added [SECURITY.md](SECURITY.md) with private vulnerability reporting guidance.
+
 ## [0.03] — 2026-10-27
 
 Mountain Man Rockets brand (mmr-brand 1.1.0). Visual only — no change to Bluetooth, GPS, parsing, geodesy, units or permissions.

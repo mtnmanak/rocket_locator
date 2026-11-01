@@ -63,7 +63,7 @@
 
 **Persistence**: DataStore for settings; Room (or flat files) for flight sessions — raw NMEA log + parsed track per session, survives app kill; last known rocket position always restored on launch.
 
-**SDK targets**: minSdk 26 (Android 8.0, covers >98% of devices, keeps BT/permission code paths manageable), targetSdk = current Play requirement (35+), compileSdk latest.
+**SDK targets**: minSdk 26 (Android 8.0, covers >98% of devices, keeps BT/permission code paths manageable), ~~targetSdk = current Play requirement (35+), compileSdk latest~~ compileSdk 37 / targetSdk 36 (Play requires 36 since 2026-08-31). Toolchain: Gradle 9.8.2, AGP 9.5.0, Kotlin 2.4.21; builds require Android SDK platform 37 and JDK 17.
 
 ## Phases
 

@@ -63,12 +63,13 @@ Eggfinder RX/LCD and Missile Works T3/RTx: NMEA over HC-06 Bluetooth Classic SPP
 
 ## Build
 
-Requires JDK 17 + Android SDK 35 (write `local.properties` with `sdk.dir=...`; forward slashes).
+Requires JDK 17 + Android SDK ~~35~~ platform 37 (write `local.properties` with `sdk.dir=...`; forward slashes).
 
 ```
-./gradlew :core:test :transport:test   # unit tests (208+, must stay green)
+./gradlew :core:test :transport:test :app:testDebugUnitTest   # unit tests (~~208+~~ 354+, must stay green)
 ./gradlew :app:assembleDebug           # debug APK
 ```
+CI also runs ktlint 1.8.0 and detekt 1.23.8 via checksum-verified CLIs; `config/detekt/baseline.xml` holds 103 pre-existing issues.
 
 Windows dev note: files created on Windows lack the executable bit — any new shell script needs `git update-index --chmod=+x <file>`.
 
