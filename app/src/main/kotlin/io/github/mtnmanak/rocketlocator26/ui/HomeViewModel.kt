@@ -33,6 +33,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
      * drogue/main, time-scaled 10x so it completes in about 20 seconds.
      */
     fun runSimulator() {
+        repository.newFlight()
         repository.connect(
             SimulatorSource(
                 flight = SyntheticFlight(
@@ -50,6 +51,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             ),
         )
     }
+
+    /** Called only after the Home confirmation dialog is accepted. */
+    fun newFlight() = repository.newFlight()
 
     /**
      * Stops the active telemetry session. Also stops [TrackingService] in

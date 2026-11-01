@@ -105,10 +105,15 @@ class DevicesViewModel(application: Application) : AndroidViewModel(application)
     /** BLE scan results, deduplicated by address, in first-seen order. */
     val scanResults: StateFlow<List<ScannedDevice>> = _scanResults.asStateFlow()
 
-    private val _isScanning = MutableStateFlow(false)
+    private val scanStatus = BleScanStatus()
 
     /** True while a BLE scan is running. */
-    val isScanning: StateFlow<Boolean> = _isScanning.asStateFlow()
+    val isScanning: StateFlow<Boolean> = scanStatus.isScanning
+
+    val scanError: StateFlow<BleScanError?> = scanStatus.error
+
+    // Only permission-request history, never telemetry or location data.
+    private val permissionHistory = application.getSharedPreferences("permission_history", Context.MODE_PRIVATE)
 
     /** Live telemetry state, for the connection card and NMEA console. */
     val telemetryUiState: StateFlow<TelemetryUiState> =
@@ -126,7 +131,11 @@ class DevicesViewModel(application: Application) : AndroidViewModel(application)
         }
 
         override fun onScanFailed(errorCode: Int) {
-            _isScanning.value = false
+            viewModelScope.launch {
+                scanStopJob?.cancel()
+                scanStopJob = null
+                scanStatus.failed(errorCode)
+            }
         }
     }
 
@@ -156,6 +165,26 @@ class DevicesViewModel(application: Application) : AndroidViewModel(application)
         else -> arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
     }
 
+    /** Record each blocking permission before opening Android's request dialog. */
+    fun markPermissionsRequested() {
+        permissionHistory.edit().apply {
+            blockingPermissions().forEach { putBoolean(it, true) }
+        }.apply()
+    }
+
+    /** Called with the Activity's rationale check after a result and on resume. */
+    fun permissionNeedsSettings(showRationale: (String) -> Boolean): Boolean =
+        needsPermissionSettings(
+            blockingPermissions().map { permission ->
+                PermissionStatus(
+                    granted = ContextCompat.checkSelfPermission(getApplication(), permission) ==
+                        PackageManager.PERMISSION_GRANTED,
+                    requestedBefore = permissionHistory.getBoolean(permission, false),
+                    showRationale = showRationale(permission),
+                )
+            },
+        )
+
     /**
      * Re-checks permissions and the Bluetooth/Location environment, and
      * reloads the bonded-device list. Call on screen resume: the user may
@@ -174,25 +203,30 @@ class DevicesViewModel(application: Application) : AndroidViewModel(application)
      * missing/off, or when the scan permission is denied.
      */
     fun startBleScan() {
-        if (_isScanning.value) return
+        if (isScanning.value) return
         // Re-read the environment so the gating cards are current even if
         // the user tapped Scan straight after flipping a system toggle.
         refresh()
-        if (!_isBluetoothEnabled.value || !_isLocationEnabled.value) return
+        if (!_hasPermissions.value || !_isBluetoothEnabled.value || !_isLocationEnabled.value) return
         val scanner = bluetoothAdapter?.bluetoothLeScanner ?: return
         _scanResults.value = emptyList()
         val settings = ScanSettings.Builder()
             .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
             .build()
+        scanStatus.started()
         try {
             scanner.startScan(null, settings, scanCallback)
         } catch (_: SecurityException) {
+            scanStatus.stopped()
+            refresh()
             return
         } catch (_: IllegalStateException) {
             // Adapter turned off between the null check and the call.
+            scanStatus.failed(3)
+            refresh()
             return
         }
-        _isScanning.value = true
+        if (!isScanning.value) return // A synchronous failure already published its error.
         scanStopJob?.cancel()
         scanStopJob = viewModelScope.launch {
             delay(SCAN_DURATION_MS)
@@ -235,7 +269,14 @@ class DevicesViewModel(application: Application) : AndroidViewModel(application)
      * POST_NOTIFICATIONS must never gate anything.
      */
     private fun hasBlockingPermissions(): Boolean {
-        val blocking = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        return blockingPermissions().all { permission ->
+            ContextCompat.checkSelfPermission(getApplication(), permission) ==
+                PackageManager.PERMISSION_GRANTED
+        }
+    }
+
+    private fun blockingPermissions(): Array<String> =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             arrayOf(
                 Manifest.permission.BLUETOOTH_CONNECT,
                 Manifest.permission.BLUETOOTH_SCAN,
@@ -243,11 +284,6 @@ class DevicesViewModel(application: Application) : AndroidViewModel(application)
         } else {
             arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
         }
-        return blocking.all { permission ->
-            ContextCompat.checkSelfPermission(getApplication(), permission) ==
-                PackageManager.PERMISSION_GRANTED
-        }
-    }
 
     private fun readBluetoothEnabled(): Boolean = bluetoothAdapter?.isEnabled == true
 
@@ -303,7 +339,7 @@ class DevicesViewModel(application: Application) : AndroidViewModel(application)
         } catch (_: IllegalStateException) {
             // Adapter already off; nothing left to stop.
         }
-        _isScanning.value = false
+        scanStatus.stopped()
     }
 
     private companion object {

@@ -28,6 +28,7 @@ android {
         // Beta versioning: versionName 0.NN, versionCode = NN (see CHANGELOG.md)
         versionCode = 3
         versionName = "0.03"
+        resValue("string", "footer_version", "v${versionName} beta")
     }
 
     signingConfigs {
@@ -65,6 +66,14 @@ android {
     buildFeatures {
         compose = true
     }
+
+    lint {
+        abortOnError = true
+    }
+}
+
+tasks.withType<Test> {
+    useJUnitPlatform()
 }
 
 dependencies {
@@ -81,4 +90,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.kotlinx.coroutines.android)
+
+    testImplementation(libs.junit.jupiter)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testRuntimeOnly(libs.junit.platform.launcher)
 }
