@@ -1,5 +1,6 @@
 package io.github.mtnmanak.rocketlocator26.ui
 
+import android.os.SystemClock
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -362,7 +363,7 @@ private fun rememberFixClock(enabled: Boolean): State<Long> {
         remember(enabled) {
             fixClockTicks(enabled)
         }
-    return ticks.collectAsStateWithLifecycle(initialValue = System.currentTimeMillis())
+    return ticks.collectAsStateWithLifecycle(initialValue = SystemClock.elapsedRealtime())
 }
 
 @Composable

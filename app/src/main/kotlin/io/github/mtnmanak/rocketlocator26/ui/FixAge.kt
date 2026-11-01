@@ -1,5 +1,6 @@
 package io.github.mtnmanak.rocketlocator26.ui
 
+import android.os.SystemClock
 import io.github.mtnmanak.rocketlocator26.core.flight.RocketState
 import io.github.mtnmanak.rocketlocator26.core.flight.isFixStale
 import kotlinx.coroutines.delay
@@ -45,10 +46,13 @@ internal fun isPositionStale(
     nowMs: Long,
 ): Boolean = rocket.position != null && (awaitingFix || rocket.lastFixAtMs == null || rocket.isFixStale(nowMs))
 
-/** Receipt and display use the same wall clock; cancellation stops the one-second ticker. */
+/**
+ * Receipt and display use the same MONOTONIC clock (`SystemClock.elapsedRealtime`, wired in `RocketLocatorApp`), so a
+ * wall-clock correction can never make an old fix look fresh. Cancellation stops the one-second ticker.
+ */
 internal fun fixClockTicks(
     enabled: Boolean,
-    nowMs: () -> Long = System::currentTimeMillis,
+    nowMs: () -> Long = SystemClock::elapsedRealtime,
 ): Flow<Long> =
     flow {
         emit(nowMs())

@@ -3,6 +3,7 @@ package io.github.mtnmanak.rocketlocator26
 import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.os.SystemClock
 import io.github.mtnmanak.rocketlocator26.service.TrackingService
 import io.github.mtnmanak.rocketlocator26.telemetry.TelemetryRepository
 import kotlinx.coroutines.CoroutineScope
@@ -25,7 +26,7 @@ class RocketLocatorApp : Application() {
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     /** Shared telemetry pipeline, consumed by the UI and [TrackingService]. */
-    val telemetry: TelemetryRepository by lazy { TelemetryRepository(applicationScope) }
+    val telemetry: TelemetryRepository by lazy { TelemetryRepository(applicationScope, SystemClock::elapsedRealtime) }
 
     override fun onCreate() {
         super.onCreate()

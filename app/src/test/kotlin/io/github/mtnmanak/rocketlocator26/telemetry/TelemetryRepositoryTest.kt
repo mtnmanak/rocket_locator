@@ -221,7 +221,7 @@ class TelemetryRepositoryTest {
     fun retryBackoffIsConnectingAndFatalDisconnectAndCompletionAreTerminal() =
         runTest {
             val events = Channel<SourceEvent>(Channel.UNLIMITED)
-            val repository = TelemetryRepository(backgroundScope)
+            val repository = TelemetryRepository(backgroundScope) { testScheduler.currentTime }
             repository.connect(channelSource(events))
             events.send(SourceEvent.Connected)
             runCurrent()
@@ -256,7 +256,7 @@ class TelemetryRepositoryTest {
     @Test
     fun supersededSessionEventsCannotOverwriteNewSession() =
         runTest {
-            val repository = TelemetryRepository(backgroundScope)
+            val repository = TelemetryRepository(backgroundScope) { testScheduler.currentTime }
             // Deliberately non-cooperative teardown exercises the session guard,
             // rather than relying on flow's normal cancellation checks to drop data.
             val oldSource =
@@ -296,7 +296,7 @@ class TelemetryRepositoryTest {
     @Test
     fun simulatorOriginFollowsHeldFixInsteadOfConnectionNameOrAttempt() =
         runTest {
-            val repository = TelemetryRepository(backgroundScope)
+            val repository = TelemetryRepository(backgroundScope) { testScheduler.currentTime }
             assertFalse(repository.uiState.value.needsSimulatorConfirmation())
             repository.connect(
                 source("Simulator") {

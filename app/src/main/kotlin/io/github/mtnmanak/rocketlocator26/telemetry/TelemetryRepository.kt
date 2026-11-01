@@ -66,12 +66,12 @@ fun TelemetryUiState.needsSimulatorConfirmation(): Boolean = rocket.position != 
  *
  * @param scope main-dispatched scope in which source flows are collected;
  *   outlives any single source (typically the application scope).
- * @param nowMs wall-clock receipt time, shared with Home's age display;
- *   injectable so JVM tests can advance time without sleeping.
+ * @param nowMs monotonic receipt time (the app passes `SystemClock.elapsedRealtime`), shared with Home's age display so a
+ *   wall-clock jump cannot make an old fix look fresh; JVM tests inject a virtual clock.
  */
 class TelemetryRepository(
     private val scope: CoroutineScope,
-    private val nowMs: () -> Long = System::currentTimeMillis,
+    private val nowMs: () -> Long, // required: never default to wall time
 ) {
     private val parser = NmeaParser()
     private val tracker = FlightTracker()
