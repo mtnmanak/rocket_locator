@@ -78,7 +78,9 @@ Keep this file current: when a run changes the method (a new slice, a new tool, 
 > **Start by reading:** `CLAUDE.md` (hard rules), `docs/build-plan.md` (locked decisions, design principles, phase status),
 > `docs/research-findings.md` (hardware protocols; the original app's bugs to avoid), `docs/bench-test-protocol.md`, the newest
 > `docs/handoff-*.md` (its "Open in this repo" and "Do not" tables), `CHANGELOG.md`, and the memory index
-> (`MEMORY.md` under the project's Claude memory folder). Then read the previous `docs/audit/AUDIT.md` if one exists: its
+> (`MEMORY.md` under the project's Claude memory folder).
+> If the memory index or a named memory is unavailable on this machine, say so in § Method and use the tracked substitutes (handoff "Gotchas" and `CLAUDE.md`), without inferring missing memory contents.
+> Then read the previous `docs/audit/AUDIT.md` if one exists: its
 > § Baseline (the figures to measure drift against), § Cleared (refuted findings; never re-raise one unless the code changed) and
 > § Recommended order of attack. Also read the previous run's working folder `.claude/audit-<date>/` (its scripts and briefs);
 > copy them into `.claude/audit-<today>/`, repoint paths and dates, re-use them, and say in § Method what changed.
@@ -94,7 +96,7 @@ Keep this file current: when a run changes the method (a new slice, a new tool, 
 > Issue, PR body, commit message, CHANGELOG entry or handoff. The handoff cites it as `docs/audit/AUDIT.md <id>`, nothing more.
 >
 > **Gates: run them; never quote earlier results.**
-> - `export JAVA_HOME=/c/Users/Eric/tools/jdk17` (memory `jdk17-location`).
+> - `export JAVA_HOME=/c/Users/Eric/tools/jdk17` (memory `jdk17-location`), or the JDK 17 on this machine; validate with `java -version` first.
 > - Delete `*/build/test-results` first: a failed Gradle run leaves stale XML that looks like a pass.
 > - Unit tests: `./gradlew :core:test :transport:test --rerun-tasks`. Count tests from the JUnit XML, as unique tests and as
 >   reported (`:transport` runs ×2 variants), and compare with `CLAUDE.md` ("208+").
@@ -337,7 +339,7 @@ Keep this file current: when a run changes the method (a new slice, a new tool, 
 >    - `docs/build-plan.md` phase status vs reality (which exit criteria are met, and the stale "private repo during beta" line)
 >    - `CLAUDE.md`'s own facts: the test count "208+", module list, build commands, hard rules each enforced by code or a test
 >      (name it)
->    - `AGENTS.md` (untracked) drift vs `CLAUDE.md`, diffed line by line
+>    - `AGENTS.md` (~~untracked~~ tracked) drift vs `CLAUDE.md`, diffed line by line
 >    - README claims vs the shipped app (name, features, install steps)
 >    - `docs/bench-test-protocol.md` vs the install rule: it says "sideload `app-debug.apk`", but a debug build can't install over
 >      the release-signed app without an uninstall, which wipes data (memory `phone-install-release-signed`)

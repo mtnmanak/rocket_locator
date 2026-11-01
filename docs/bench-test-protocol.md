@@ -6,7 +6,7 @@ Goal: validate the Phase 2 exit criterion — **live NMEA streaming from real ha
 
 - Eggfinder RX or LCD receiver with the Bluetooth module installed, powered
 - Eggfinder TX (or Mini/TRS) transmitter, powered, ideally near a window so it gets GPS lock
-- Android phone with `app-debug.apk` (v0.02) sideloaded
+- Android phone with ~~`app-debug.apk` (v0.02) sideloaded~~ the release-signed APK installed: `rocket-locator-26.apk` from the latest Release, or a local `:app:assembleRelease` signed with the release key; use `adb install -r`. Never uninstall (it wipes data); a debug-signed build cannot install over the release-signed app.
 - Optional: a second person's patience
 
 ## 1. Identify which Bluetooth module you have
@@ -49,8 +49,9 @@ Run each; the app must recover **by itself** — no restarts, no crashes:
 | R4 | Screen off / phone in pocket 5 min while connected | Notification stays; on unlock, console has continued (no gap at the end) |
 | R5 | Switch to another app for 5 min | Same as R4 |
 | R6 | Tap Disconnect in the notification | Service + notification gone, status Disconnected, last data still displayed |
-| R7 | Kill the app from recents while connected | Service should die with it; relaunch shows last state, no crash |
-| R8 | Connect with TX **on and locked**, confirm Home readouts | Lat/lon plausible (check against a maps app), altitude ≈ your elevation, sats ≥ 4 |
+| R7a | ~~Kill the app from recents while connected~~ Swipe the app task away from recents while connected | ~~Service should die with it; relaunch shows last state, no crash~~ Task dismissal does not intentionally disconnect telemetry; while the process survives, reopening displays its existing state. Record service, notification and telemetry behavior on the tested device. |
+| R7b | Separately kill the process and relaunch | No crash; position lost after process death — known gap. Today the last position is in memory only and does not survive process death; Phase 3 adds persistence. Bluetooth does not automatically reconnect. |
+| R8 | Connect with TX **on and locked**, confirm Home readouts | Lat/lon plausible (check against a maps app), ~~altitude ≈ your elevation~~ altitude AGL ≈ 0 m after the first valid GGA altitude while stationary; compare local MSL elevation only via the console/raw GGA altitude field, sats ≥ 4 |
 
 ## 5. Capture for me
 

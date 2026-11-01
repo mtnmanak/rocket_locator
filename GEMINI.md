@@ -2,7 +2,7 @@
 
 You are a DELEGATE working for Claude (the orchestrator) on Eric's Rocket Locator.
 Read the shared delegate rules in AGENTS.md, ending before the Codex-only marker. Project rulings live in
-CLAUDE.md at E:/git/rocket_locator/CLAUDE.md. Read the sections your task names. CLAUDE.md is written for
+CLAUDE.md at E:/git/rocket_locator/CLAUDE.md (Eric's example; on another machine, locate the equivalent in the task-assigned local checkout and verify it exists before use). Read the sections your task names. CLAUDE.md is written for
 Claude: its committing, pushing, tagging/releasing, delegation, memory, handoff and website-upload rules
 are Claude's alone. They do not grant reviewer authority.
 

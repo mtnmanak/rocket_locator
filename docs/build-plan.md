@@ -9,7 +9,7 @@
 | Hardware scope (v1.0) | Bluetooth Classic SPP (Eggfinder RX/LCD, Missile Works T3/RTx — 9600 8N1, PIN 1234) **+** BLE FFE0/FFE1 (HM-10/BT-04-style UART). Featherweight deferred (proprietary BLE, needs reverse engineering or vendor cooperation). Eggtimer's LoRa **LR series** (shipping ~end 2026) is added once its receiver's phone link is known, alongside, never instead of, the Hope RF Eggfinder gear (see research-findings §2) |
 | Maps | Layered: **compass-first recovery mode** (no map data required) → **MapLibre offline** (pre-downloaded regions + MBTiles/PMTiles sideload) → online extras (satellite basemap, Google Earth/Maps hand-off, KML export) |
 | Platform | Native Android, **Kotlin + Jetpack Compose**; core logic in a UI-free pure-Kotlin module to keep a future iOS/KMP path open |
-| License | **GPL-3.0**, developed clean-room in a **private repo during beta**, public at release. No code copied from unlicensed prior art (original RocketLocator, SimpleModelTracker); BearConsole2 (GPL-3.0) adaptable if ever useful |
+| License | **GPL-3.0**, developed clean-room ~~in a **private repo during beta**, public at release~~; the repo has been public since 2026-07-07. No code copied from unlicensed prior art (original RocketLocator, SimpleModelTracker); BearConsole2 (GPL-3.0) adaptable if ever useful |
 | Distribution | Google Play (internal testing → production); F-Droid + GitHub releases after repo goes public |
 
 ## Design principles (lessons from the original's death)
@@ -65,7 +65,7 @@
 ## Phases
 
 **Phase 0 — Scaffolding** *(small)*
-Multi-module Gradle project, Kotlin + Compose BOM, GPL-3.0 LICENSE, README, ktlint/detekt, GitHub Actions CI (build + unit tests), private GitHub repo.
+Multi-module Gradle project, Kotlin + Compose BOM, GPL-3.0 LICENSE, README, ktlint/detekt, GitHub Actions CI (build + unit tests), ~~private GitHub repo~~ GitHub repo (public since 2026-07-07).
 
 **Phase 1 — Core domain** *(medium)*
 NMEA parser with an exhaustive unit-test corpus (real Eggfinder/T3 sentence samples, truncated/corrupt/multi-talker cases), geodesy math with known-answer tests, flight state machine, simulator. **Exit criterion: `:core` fully green with no Android dependency.**
@@ -100,7 +100,7 @@ Region downloader (streets + NAIP/Esri satellite where licensed), MBTiles/PMTile
 KML/GPX export, Google Earth/Maps hand-off, session log browser, sounds/settings completeness, dark theme, accessibility pass, app icon/branding.
 
 **Phase 7 — Beta → release**
-Play internal testing track with rocketry-club testers across the hardware matrix (Eggfinder LCD+BT, T3, RTx, any BLE module, and the Eggtimer LR series if it has a phone link by then); field-test protocol doc; crash reporting (self-hostable/privacy-respecting, e.g. ACRA); fix cycle; then: repo public, Play production, F-Droid submission, announce on TheRocketryForum (where the original's users still are).
+Play internal testing track with rocketry-club testers across the hardware matrix (Eggfinder LCD+BT, T3, RTx, any BLE module, and the Eggtimer LR series if it has a phone link by then); field-test protocol doc; crash reporting (self-hostable/privacy-respecting, e.g. ACRA); fix cycle; then: ~~repo public,~~ (repo already public since 2026-07-07) Play production, F-Droid submission, announce on TheRocketryForum (where the original's users still are).
 
 **Deferred (post-1.0)**: Featherweight BlueRaven/GPS (needs BLE protocol reverse-engineering with real hardware), iOS/KMP evaluation, live flight telemetry extras (apogee detection from GGA altitude), multi-rocket tracking.
 
@@ -112,7 +112,7 @@ Play internal testing track with rocketry-club testers across the hardware matri
 | BLE module variants (BT-04 etc.) behave inconsistently | CCCD write with notify fallback; MTU negotiation; beta hardware matrix |
 | Offline satellite licensing outside the US | NAIP (public domain) for US; Esri terms verification; MBTiles sideload as universal fallback |
 | Play target-SDK policy churn | Annual maintenance budgeted; GPL + public repo as continuity backstop |
-| Solo-dev bus factor (killed the original) | GPL-3.0, public repo at release, clean modular code, CI |
+| Solo-dev bus factor (killed the original) | GPL-3.0, public repo ~~at release~~ (public since 2026-07-07), clean modular code, CI |
 | Eggtimer moves to LoRa (LR series, announced Sep 2026); its receiver may have no phone output, or a new format | Keep full support for Hope RF Eggfinder gear (in the field for years); `NmeaSource` abstraction means a new link or parser slots in without touching tracking; get the LCD-LR user guide and hardware before speccing support |
 
 ## Open questions for the user

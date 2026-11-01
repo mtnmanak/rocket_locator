@@ -117,7 +117,7 @@ The Eggtimer LR series (above) may break this pattern: whether its LCD-LR receiv
 - **Permissions (API 31+)**: `BLUETOOTH_CONNECT` (connect to paired devices) and `BLUETOOTH_SCAN` are **runtime** permissions ("Nearby devices" prompt). Location permission (`ACCESS_FINE_LOCATION`) still needed for the phone-position/navigation feature.
 - **Foreground services (API 34+)**: every FGS must declare a type + type-specific permission or it throws. Bluetooth link → `connectedDevice` type (`FOREGROUND_SERVICE_CONNECTED_DEVICE`); continuous phone tracking → `location` type (`FOREGROUND_SERVICE_LOCATION`).
 - **Map library**: **osmdroid was archived Nov 20, 2024** (read-only, last release 6.1.20) — both bdureau apps depend on it; don't copy that stack. **MapLibre** is the maintained successor path (ODK Collect migrated for exactly this reason) with offline MBTiles/PMTiles support and satellite-capable raster sources. Google Maps SDK is fine online but weak offline.
-- **MVP path is clear**: Classic SPP RFCOMM (UUID `00001101-…`) at 9600 baud → NMEA parser (GGA+RMC, all talker IDs `G[PNLA]`, checksum-validated) → MapLibre offline map → distance/bearing/compass guidance. BLE FFE0/FFE1 as phase 2; Featherweight as research-dependent phase 3.
+- **MVP path is clear**: Classic SPP RFCOMM (UUID `00001101-…`) at 9600 baud → NMEA parser (GGA+RMC, all talker IDs `G[PNLA]`, checksum-validated) → MapLibre offline map → distance/bearing/compass guidance. BLE FFE0/FFE1 as phase 2; ~~Featherweight as research-dependent phase 3~~ Featherweight deferred until after 1.0, subject to protocol research and hardware access. Phase numbering is governed by `docs/build-plan.md`: Phase 3 is recovery mode.
 
 ---
 

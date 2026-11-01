@@ -10,12 +10,12 @@ A modern Android app for recovering model and high-power rockets carrying GPS tr
 
 ## How it works
 
-Your rocket carries a GPS transmitter. A handheld RF receiver picks up its telemetry and relays standard NMEA sentences to your phone over Bluetooth. This app turns that stream into recovery guidance:
+Your rocket carries a GPS transmitter. A handheld RF receiver picks up its telemetry and relays standard NMEA sentences to your phone over Bluetooth. ~~This app turns that stream into recovery guidance:~~ **v0.03** provides a live telemetry dashboard, Devices with Classic SPP + BLE UART, a simulator, and a foreground tracking service. Recovery features are **planned (Phases 3–5)**:
 
-- **Recovery compass** — arrow to the rocket, distance, and accelerating "radar beep"; works with **no map data and no cell coverage**
-- **Live map** — rocket position, flight path, and a line from you to the rocket (offline maps downloadable before launch day)
-- **Manual coordinate entry** — type in coordinates from any source and navigate to them
-- Last-known position is always preserved, even through signal loss and app restarts
+- **Recovery compass** — **planned (Phase 3)**: arrow to the rocket, distance, and accelerating "radar beep"; works with **no map data and no cell coverage**
+- **Live map** — **planned (Phase 4; offline maps Phase 5)**: rocket position, flight path, and a line from you to the rocket (offline maps downloadable before launch day)
+- **Manual coordinate entry** — **planned (Phase 3)**: type in coordinates from any source and navigate to them
+- ~~Last-known position is always preserved, even through signal loss and app restarts~~ **Position persistence is planned (Phase 3).** In v0.03, rocket state remains in memory only and is not restored after process death.
 
 ## Supported hardware
 

@@ -41,7 +41,7 @@ suspended only when Eric says in the session not to use Codex and/or agy.
   (unlike MMRSim), so worktrees have them. Keep the shared part of `AGENTS.md` under 24,000 bytes; Gemini doesn't load past it.
 - Pass bulk input as a FILE in the workspace, not pasted into the prompt. Ask for a short reply, with the details written to a
   file. A second, fresh Codex thread verifies anything a Codex `--write` thread wrote before it ships.
-- Codex desktop plugin root: `C:/Users/Eric/.claude/plugins/cache/openai-codex/codex/1.0.6`. After a Codex update, stop the
+- Codex desktop plugin root: `C:/Users/Eric/.claude/plugins/cache/openai-codex/codex/1.0.6` (Eric's example); on another machine, locate the equivalent (e.g. `~/.claude/plugins/cache/openai-codex/codex/<ver>/`) and verify it and `scripts/codex-companion.mjs` exist before use. After a Codex update, stop the
   companion broker (`app-server-broker.mjs serve` and its `codex app-server` child): a stale broker rejects new model ids.
 - agy: one call costs ~80k Gemini tokens even for a one-line question, so batch work into fewer, larger calls. It has no write
   grant, so treat it as read-only. Exit 15 means a tool was denied headless: rephrase the brief so it needs no commands.

@@ -1,5 +1,5 @@
 You are a DELEGATE working for Claude (the orchestrator) on Eric's Rocket Locator. Project rulings live in
-CLAUDE.md at E:/git/rocket_locator/CLAUDE.md. CLAUDE.md is written for Claude; its orchestration rules (committing,
+CLAUDE.md at E:/git/rocket_locator/CLAUDE.md (Eric's example; on another machine, locate the equivalent in the task-assigned local checkout and verify it exists before use). CLAUDE.md is written for Claude; its orchestration rules (committing,
 pushing, tagging/releasing, delegating to Codex/agy, memory, handoffs, website uploads) are Claude's alone.
 Read the sections your task names. Do not inherit Claude's authority from them.
 
@@ -100,10 +100,10 @@ promo-page decision with Claude for Eric before redesigning site/deploy/.
 ## Commands and checks
 
 Authorized builds require JDK 17 and Android SDK 35. JAVA_HOME must be exported; the desktop path in the
-audit prompt is /c/Users/Eric/tools/jdk17. In a Bash environment:
+audit prompt is /c/Users/Eric/tools/jdk17 (Eric's example); on another machine, locate the local JDK 17 and verify it exists and reports Java 17 with `java -version` before use. In a Bash environment:
 
 ```bash
-export JAVA_HOME=/c/Users/Eric/tools/jdk17
+export JAVA_HOME=/c/Users/Eric/tools/jdk17 # Eric's example; on another machine, use the verified local JDK 17 path
 ./gradlew :core:test :transport:test
 ./gradlew :app:assembleDebug
 ```
@@ -174,7 +174,7 @@ The task specifies the workspace and write scope. Codex companion tasks are read
 passed. Do not switch to the main checkout to get around a worktree or sandbox restriction.
 
 In this repo, docs/ and CLAUDE.md are tracked, so worktrees contain their tracked versions. Uncommitted or
-untracked inputs may be absent or newer in the main checkout at E:/git/rocket_locator/. Read named inputs
+untracked inputs may be absent or newer in the main checkout at E:/git/rocket_locator/ (Eric's example; on another machine, locate the equivalent local checkout specified by the task and verify it exists before use). Read named inputs
 from the checkout the task specifies. Report missing inputs instead of silently using an older copy. The
 main checkout is reference-only unless writes there are explicitly assigned. CLAUDE.md remains Claude's
 orchestration guide, not a grant of delegate authority.
