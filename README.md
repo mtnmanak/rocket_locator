@@ -8,6 +8,8 @@ A modern Android app for recovering model and high-power rockets carrying GPS tr
 
 **Found a bug, or want a feature?** [Open an issue](https://github.com/mtnmanak/rocket_locator/issues) — bug reports and flight logs from real launches genuinely shape what gets built next. No GitHub account? Email <admin@mountainmanrockets.com> and it gets filed for you.
 
+Security issues: see [SECURITY.md](SECURITY.md) — please don't file them as public issues.
+
 ## How it works
 
 Your rocket carries a GPS transmitter. A handheld RF receiver picks up its telemetry and relays standard NMEA sentences to your phone over Bluetooth. ~~This app turns that stream into recovery guidance:~~ **v0.03** provides a live telemetry dashboard, Devices with Classic SPP + BLE UART, a simulator, and a foreground tracking service. Recovery features are **planned (Phases 3–5)**:

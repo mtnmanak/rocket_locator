@@ -5,18 +5,21 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-java@v5
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
         with:
           distribution: temurin
           java-version: '17'
 
-      - uses: gradle/actions/setup-gradle@v5
+      - uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5.0.2
 
       - name: Core unit tests
         run: ./gradlew :core:test
@@ -24,8 +27,28 @@ jobs:
       - name: Full build
         run: ./gradlew build
 
+      - name: Check Kotlin formatting
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --silent --show-error https://github.com/pinterest/ktlint/releases/download/1.8.0/ktlint --output ktlint
+          echo 'a3fd620207d5c40da6ca789b95e7f823c54e854b7fade7f613e91096a3706d75  ktlint' | sha256sum --check --strict
+          java -jar ktlint --relative "core/src/**/*.kt" "transport/src/**/*.kt" "app/src/**/*.kt"
+
+      - name: Run detekt
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --silent --show-error https://github.com/detekt/detekt/releases/download/v1.23.8/detekt-cli-1.23.8-all.jar --output detekt-cli-1.23.8-all.jar
+          echo '2ce2ff952e150baf28a29cda70a363b0340b3e81a55f43e51ec5edffc3d066c1  detekt-cli-1.23.8-all.jar' | sha256sum --check --strict
+          java -jar detekt-cli-1.23.8-all.jar \
+            --input core/src/main,transport/src/main,app/src/main \
+            --config config/detekt/detekt.yml \
+            --build-upon-default-config \
+            --baseline config/detekt/baseline.xml
+
       - name: Upload debug APK
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: app-debug
           path: app/build/outputs/apk/debug/*.apk

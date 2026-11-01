@@ -1,5 +1,6 @@
 # Gradle
 .gradle/
+.kotlin/
 build/
 !gradle/wrapper/gradle-wrapper.jar
 
@@ -18,6 +19,8 @@ Thumbs.db
 # Signing — release keystores must NEVER be committed
 *.keystore
 *.jks
+*.p12
+*.pfx
 keystore.properties
 
 # Logs / captures

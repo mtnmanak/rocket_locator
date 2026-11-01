@@ -1,0 +1,10 @@
+# Merge with detekt defaults using --build-upon-default-config.
+naming:
+  FunctionNaming:
+    ignoreAnnotated: ['Composable']
+
+style:
+  MagicNumber:
+    excludes: ['**/ui/**', '**/test/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**']
+    ignorePropertyDeclaration: true
+    ignoreCompanionObjectPropertyDeclaration: true

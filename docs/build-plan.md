@@ -11,6 +11,9 @@
 | Platform | Native Android, **Kotlin + Jetpack Compose**; core logic in a UI-free pure-Kotlin module to keep a future iOS/KMP path open |
 | License | **GPL-3.0**, developed clean-room ~~in a **private repo during beta**, public at release~~; the repo has been public since 2026-07-07. No code copied from unlicensed prior art (original RocketLocator, SimpleModelTracker); BearConsole2 (GPL-3.0) adaptable if ever useful |
 | Distribution | Google Play (internal testing → production); F-Droid + GitHub releases after repo goes public |
+| Measured-fix policy (2026-10-31) | Only measured fixes move the rocket: GGA quality 1–5; RMC/GLL positioning mode A, D, F, P, R, or absent/empty for pre-NMEA-2.3 devices. Reject GGA 0, 6 (dead reckoning), 7 (manual), 8 (simulation), and other qualities, and RMC/GLL E, M, N, S, and other modes for position, altitude, path, and lastFixAt. Receiver status (fixQuality, satellites, HDOP) still updates so the UI can explain the receiver state. |
+| Fix staleness (2026-10-31) | A fix is stale 10 s after the last valid fix (`STALE_AFTER_MS = 10_000`), measured with a ticking clock rather than sentence arrival. |
+| Explicit flight reset (2026-10-31) | Connect never clears the rocket. Only an explicit, confirmed **New flight** action clears it. **Run simulator** asks for confirmation when a real position is held, then performs New flight before starting. |
 
 ## Design principles (lessons from the original's death)
 
