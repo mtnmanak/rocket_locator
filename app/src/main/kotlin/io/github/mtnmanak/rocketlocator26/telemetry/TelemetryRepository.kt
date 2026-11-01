@@ -45,8 +45,7 @@ data class TelemetryUiState(
 )
 
 /** Starting a demo must not silently discard a real recovery position. */
-fun TelemetryUiState.needsSimulatorConfirmation(): Boolean =
-    rocket.position != null && !positionIsSimulator
+fun TelemetryUiState.needsSimulatorConfirmation(): Boolean = rocket.position != null && !positionIsSimulator
 
 /**
  * Single process-wide telemetry pipeline: consumes one [NmeaSource] at a
@@ -74,7 +73,6 @@ class TelemetryRepository(
     private val scope: CoroutineScope,
     private val nowMs: () -> Long = System::currentTimeMillis,
 ) {
-
     private val parser = NmeaParser()
     private val tracker = FlightTracker()
 
@@ -133,23 +131,24 @@ class TelemetryRepository(
         // NOTE: with Dispatchers.Main.immediate this body starts executing
         // before launch returns, so the stale-session guard uses the token
         // captured above rather than comparing against activeJob.
-        activeJob = scope.launch {
-            source.events()
-                .onCompletion { cause ->
-                    // Normal completion means the source is done for good
-                    // (simulator finished, stream ended). Cancellation is
-                    // handled by whoever cancelled; a newer session owns the
-                    // state now.
-                    if (cause == null && mySession == session) {
-                        _uiState.update { it.copy(connectionState = ConnectionState.DISCONNECTED) }
+        activeJob =
+            scope.launch {
+                source
+                    .events()
+                    .onCompletion { cause ->
+                        // Normal completion means the source is done for good
+                        // (simulator finished, stream ended). Cancellation is
+                        // handled by whoever cancelled; a newer session owns the
+                        // state now.
+                        if (cause == null && mySession == session) {
+                            _uiState.update { it.copy(connectionState = ConnectionState.DISCONNECTED) }
+                        }
+                    }.collect { event ->
+                        if (mySession == session) {
+                            onEvent(event)
+                        }
                     }
-                }
-                .collect { event ->
-                    if (mySession == session) {
-                        onEvent(event)
-                    }
-                }
-        }
+            }
     }
 
     /** The only flight-clearing action; callers must obtain the user's confirmation. */
@@ -182,18 +181,20 @@ class TelemetryRepository(
                 _uiState.update { it.copy(connectionState = ConnectionState.CONNECTED) }
             }
 
-            is SourceEvent.Disconnected ->
+            is SourceEvent.Disconnected -> {
                 _uiState.update {
                     it.copy(
                         // A Disconnected during a retry backoff is transient;
                         // the source reconnects by itself.
-                        connectionState = if (retryPending) {
-                            ConnectionState.CONNECTING
-                        } else {
-                            ConnectionState.DISCONNECTED
-                        },
+                        connectionState =
+                            if (retryPending) {
+                                ConnectionState.CONNECTING
+                            } else {
+                                ConnectionState.DISCONNECTED
+                            },
                     )
                 }
+            }
 
             is SourceEvent.LineReceived -> {
                 val result = parser.parse(event.raw)
@@ -219,11 +220,12 @@ class TelemetryRepository(
                     it.copy(
                         // willRetry means the source is backing off to
                         // reconnect on its own; reflect that as CONNECTING.
-                        connectionState = if (event.willRetry) {
-                            ConnectionState.CONNECTING
-                        } else {
-                            ConnectionState.DISCONNECTED
-                        },
+                        connectionState =
+                            if (event.willRetry) {
+                                ConnectionState.CONNECTING
+                            } else {
+                                ConnectionState.DISCONNECTED
+                            },
                         recentLines = appendLine(it.recentLines, "[error] ${event.message}"),
                     )
                 }
@@ -232,12 +234,16 @@ class TelemetryRepository(
     }
 
     /** Appends [line], keeping at most [MAX_RECENT_LINES] entries, newest last. */
-    private fun appendLine(lines: List<String>, line: String): List<String> {
-        val trimmed = if (lines.size >= MAX_RECENT_LINES) {
-            lines.drop(lines.size - MAX_RECENT_LINES + 1)
-        } else {
-            lines
-        }
+    private fun appendLine(
+        lines: List<String>,
+        line: String,
+    ): List<String> {
+        val trimmed =
+            if (lines.size >= MAX_RECENT_LINES) {
+                lines.drop(lines.size - MAX_RECENT_LINES + 1)
+            } else {
+                lines
+            }
         return trimmed + line
     }
 

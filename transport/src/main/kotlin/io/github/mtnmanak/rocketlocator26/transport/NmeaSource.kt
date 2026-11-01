@@ -24,7 +24,10 @@ sealed interface SourceEvent {
      *   links this is a wall-clock-derived reception time; for replay/simulator
      *   sources it is the (scaled) offset from the start of playback.
      */
-    data class LineReceived(val raw: String, val timestampMs: Long) : SourceEvent
+    data class LineReceived(
+        val raw: String,
+        val timestampMs: Long,
+    ) : SourceEvent
 
     /**
      * A link problem occurred.
@@ -33,7 +36,10 @@ sealed interface SourceEvent {
      * @property willRetry true if the source will attempt to recover on its own
      *   (e.g. reconnect with backoff); false if the failure is terminal.
      */
-    data class SourceError(val message: String, val willRetry: Boolean) : SourceEvent
+    data class SourceError(
+        val message: String,
+        val willRetry: Boolean,
+    ) : SourceEvent
 }
 
 /** A stream of raw NMEA lines from some receiver link (Bluetooth SPP, BLE, simulator...). */

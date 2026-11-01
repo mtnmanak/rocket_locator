@@ -29,23 +29,31 @@ fun formatFixAge(
     locale: Locale = Locale.getDefault(),
 ): String {
     val (value, unit) = fixAgeParts(ageMs)
-    val format = when (unit) {
-        AgeUnit.SECONDS -> secondsFormat
-        AgeUnit.MINUTES -> minutesFormat
-        AgeUnit.HOURS -> hoursFormat
-    }
+    val format =
+        when (unit) {
+            AgeUnit.SECONDS -> secondsFormat
+            AgeUnit.MINUTES -> minutesFormat
+            AgeUnit.HOURS -> hoursFormat
+        }
     return String.format(locale, format, value)
 }
 
 /** Retained sessions and restored positions are last-known before another measured fix. */
-internal fun isPositionStale(rocket: RocketState, awaitingFix: Boolean, nowMs: Long): Boolean =
-    rocket.position != null && (awaitingFix || rocket.lastFixAtMs == null || rocket.isFixStale(nowMs))
+internal fun isPositionStale(
+    rocket: RocketState,
+    awaitingFix: Boolean,
+    nowMs: Long,
+): Boolean = rocket.position != null && (awaitingFix || rocket.lastFixAtMs == null || rocket.isFixStale(nowMs))
 
 /** Receipt and display use the same wall clock; cancellation stops the one-second ticker. */
-internal fun fixClockTicks(enabled: Boolean, nowMs: () -> Long = System::currentTimeMillis): Flow<Long> = flow {
-    emit(nowMs())
-    while (enabled) {
-        delay(1_000L)
+internal fun fixClockTicks(
+    enabled: Boolean,
+    nowMs: () -> Long = System::currentTimeMillis,
+): Flow<Long> =
+    flow {
         emit(nowMs())
+        while (enabled) {
+            delay(1_000L)
+            emit(nowMs())
+        }
     }
-}

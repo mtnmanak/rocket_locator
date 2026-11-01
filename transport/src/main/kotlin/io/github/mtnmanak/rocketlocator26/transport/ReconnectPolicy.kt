@@ -20,7 +20,6 @@ class ReconnectPolicy(
     private val initialDelayMs: Long = 1_000,
     private val maxDelayMs: Long = 15_000,
 ) {
-
     init {
         require(initialDelayMs > 0) { "initialDelayMs must be positive, was $initialDelayMs" }
         require(maxDelayMs >= initialDelayMs) {

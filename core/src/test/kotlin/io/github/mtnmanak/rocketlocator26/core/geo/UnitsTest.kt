@@ -12,7 +12,6 @@ import kotlin.math.abs
  * tolerances only where double rounding legitimately intervenes.
  */
 class UnitsTest {
-
     // ------------------------------------------------------------------
     // feet <-> meters
     // ------------------------------------------------------------------

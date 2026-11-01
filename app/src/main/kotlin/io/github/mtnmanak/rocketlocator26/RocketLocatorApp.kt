@@ -17,7 +17,6 @@ import kotlinx.coroutines.SupervisorJob
  * [TrackingService] while the app is backgrounded.
  */
 class RocketLocatorApp : Application() {
-
     /**
      * Process-lifetime scope for the telemetry pipeline. Main-immediate
      * because [TelemetryRepository] requires single-threaded (main)
@@ -40,11 +39,12 @@ class RocketLocatorApp : Application() {
      * no-op.
      */
     private fun createTrackingNotificationChannel() {
-        val channel = NotificationChannel(
-            TrackingService.CHANNEL_ID,
-            "Tracking",
-            NotificationManager.IMPORTANCE_LOW,
-        )
+        val channel =
+            NotificationChannel(
+                TrackingService.CHANNEL_ID,
+                "Tracking",
+                NotificationManager.IMPORTANCE_LOW,
+            )
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
     }
 }

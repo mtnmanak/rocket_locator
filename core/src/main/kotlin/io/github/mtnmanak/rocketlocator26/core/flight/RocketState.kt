@@ -71,5 +71,7 @@ fun RocketState.fixAgeMs(nowMs: Long): Long? {
 }
 
 /** Pure clock-based check; callers supply a ticking clock, independent of sentence arrival. */
-fun RocketState.isFixStale(nowMs: Long, staleAfterMs: Long = STALE_AFTER_MS): Boolean =
-    fixAgeMs(nowMs)?.let { it >= staleAfterMs } ?: false
+fun RocketState.isFixStale(
+    nowMs: Long,
+    staleAfterMs: Long = STALE_AFTER_MS,
+): Boolean = fixAgeMs(nowMs)?.let { it >= staleAfterMs } ?: false

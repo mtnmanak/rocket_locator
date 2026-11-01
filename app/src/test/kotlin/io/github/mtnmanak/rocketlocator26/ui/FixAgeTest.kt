@@ -19,7 +19,10 @@ import java.util.Locale
 class FixAgeTest {
     @ParameterizedTest
     @CsvSource("0,0 s", "59000,59 s", "60000,1 min", "3660000,1 h")
-    fun ageUsesWholeSecondsMinutesAndHours(ageMs: Long, expected: String) {
+    fun ageUsesWholeSecondsMinutesAndHours(
+        ageMs: Long,
+        expected: String,
+    ) {
         assertEquals(expected, formatFixAge(ageMs, "%1\$d s", "%1\$d min", "%1\$d h", Locale.US))
     }
 
@@ -47,35 +50,38 @@ class FixAgeTest {
     }
 
     @Test
-    fun tickerAdvancesWithoutTelemetryAndStopsOnCancellation() = runTest {
-        val ticks = mutableListOf<Long>()
-        val job = backgroundScope.launch {
-            fixClockTicks(enabled = true) { testScheduler.currentTime }.collect { ticks += it }
+    fun tickerAdvancesWithoutTelemetryAndStopsOnCancellation() =
+        runTest {
+            val ticks = mutableListOf<Long>()
+            val job =
+                backgroundScope.launch {
+                    fixClockTicks(enabled = true) { testScheduler.currentTime }.collect { ticks += it }
+                }
+            runCurrent()
+            assertEquals(listOf(0L), ticks)
+            advanceTimeBy(999L)
+            runCurrent()
+            assertEquals(listOf(0L), ticks)
+            advanceTimeBy(1L)
+            runCurrent()
+            assertEquals(listOf(0L, 1_000L), ticks)
+            advanceTimeBy(9_000L)
+            runCurrent()
+            val rocket = RocketState(position = GeoPoint(40.0, -105.0), lastFixAtMs = 0L)
+            assertTrue(isPositionStale(rocket, awaitingFix = false, nowMs = ticks.last()))
+            job.cancel()
+            runCurrent()
+            val count = ticks.size
+            advanceTimeBy(60_000L)
+            runCurrent()
+            assertEquals(count, ticks.size)
         }
-        runCurrent()
-        assertEquals(listOf(0L), ticks)
-        advanceTimeBy(999L)
-        runCurrent()
-        assertEquals(listOf(0L), ticks)
-        advanceTimeBy(1L)
-        runCurrent()
-        assertEquals(listOf(0L, 1_000L), ticks)
-        advanceTimeBy(9_000L)
-        runCurrent()
-        val rocket = RocketState(position = GeoPoint(40.0, -105.0), lastFixAtMs = 0L)
-        assertTrue(isPositionStale(rocket, awaitingFix = false, nowMs = ticks.last()))
-        job.cancel()
-        runCurrent()
-        val count = ticks.size
-        advanceTimeBy(60_000L)
-        runCurrent()
-        assertEquals(count, ticks.size)
-    }
 
     @Test
-    fun emptyFlightDoesNotKeepTicking() = runTest {
-        val ticks = mutableListOf<Long>()
-        fixClockTicks(enabled = false) { testScheduler.currentTime }.collect { ticks += it }
-        assertEquals(listOf(0L), ticks)
-    }
+    fun emptyFlightDoesNotKeepTicking() =
+        runTest {
+            val ticks = mutableListOf<Long>()
+            fixClockTicks(enabled = false) { testScheduler.currentTime }.collect { ticks += it }
+            assertEquals(listOf(0L), ticks)
+        }
 }

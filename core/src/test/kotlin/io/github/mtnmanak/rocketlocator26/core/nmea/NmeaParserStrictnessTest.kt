@@ -47,10 +47,12 @@ class NmeaParserStrictnessTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = [
-        "4e3", "4.0e3", "+4000.000", "-4000.000", "4000.000E0", "0x10", "0x1.0p1",
-        "NaN", "Infinity", "40 00.000", "4000.", ".5", "00000.0",
-    ])
+    @ValueSource(
+        strings = [
+            "4e3", "4.0e3", "+4000.000", "-4000.000", "4000.000E0", "0x10", "0x1.0p1",
+            "NaN", "Infinity", "40 00.000", "4000.", ".5", "00000.0",
+        ],
+    )
     fun coordinateSyntaxRejectsNonDecimalAndOverwideFields(value: String) {
         val gga = parsed("GPGGA,120000,$value,N,$value,E,1,08,0.9,545.4,M,46.9,M,,") as GgaSentence
         assertNull(gga.latitude, "latitude spelling: $value")
@@ -69,10 +71,12 @@ class NmeaParserStrictnessTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = [
-        "1e99", "1.0E99", "4e3", "4.0e3", "4000.000E0", "+1.0", "0x10", "0x1.0p1",
-        "NaN", "Infinity", "-Infinity", "1 0", "1.", ".5", "--1",
-    ])
+    @ValueSource(
+        strings = [
+            "1e99", "1.0E99", "4e3", "4.0e3", "4000.000E0", "+1.0", "0x10", "0x1.0p1",
+            "NaN", "Infinity", "-Infinity", "1 0", "1.", ".5", "--1",
+        ],
+    )
     fun numericFieldsRejectNonDecimalSpellings(value: String) {
         val gga = parsed("GPGGA,120000,4000,N,10500,W,1,08,$value,$value,M,$value,M,,") as GgaSentence
         assertNull(gga.hdop)

@@ -18,7 +18,10 @@ import kotlin.math.sin
  *   which the [sentences] should be delivered.
  * @property sentences the raw NMEA sentences to deliver at this tick, in order.
  */
-data class SimulatedSample(val timeOffsetMs: Long, val sentences: List<String>)
+data class SimulatedSample(
+    val timeOffsetMs: Long,
+    val sentences: List<String>,
+)
 
 /**
  * Parameters describing a synthetic rocket flight.
@@ -66,8 +69,9 @@ data class FlightParams(
  * There is no randomness and no clock access; the same [FlightParams] always
  * yield byte-identical output.
  */
-class SyntheticFlight(private val params: FlightParams) {
-
+class SyntheticFlight(
+    private val params: FlightParams,
+) {
     init {
         require(params.sampleHz in 1..1000) { "sampleHz must be in 1..1000, was ${params.sampleHz}" }
         require(params.ascentSeconds > 0.0 && params.ascentSeconds.isFinite()) {
@@ -116,16 +120,23 @@ class SyntheticFlight(private val params: FlightParams) {
         val samples = ArrayList<SimulatedSample>(PAD_SAMPLES + ascentCount + descentCount + LANDED_SAMPLES)
         var index = 0
 
-        fun emit(position: GeoPoint, altitudeMsl: Double, speedKnots: Double, course: Double) {
+        fun emit(
+            position: GeoPoint,
+            altitudeMsl: Double,
+            speedKnots: Double,
+            course: Double,
+        ) {
             // Multiply before dividing: per-sample rounding without drift.
             val offsetMs = index * 1000L / params.sampleHz
-            samples += SimulatedSample(
-                timeOffsetMs = offsetMs,
-                sentences = listOf(
-                    gga(offsetMs, position, altitudeMsl),
-                    rmc(offsetMs, position, speedKnots, course),
-                ),
-            )
+            samples +=
+                SimulatedSample(
+                    timeOffsetMs = offsetMs,
+                    sentences =
+                        listOf(
+                            gga(offsetMs, position, altitudeMsl),
+                            rmc(offsetMs, position, speedKnots, course),
+                        ),
+                )
             index++
         }
 
@@ -158,21 +169,32 @@ class SyntheticFlight(private val params: FlightParams) {
 
     // --- NMEA sentence builders --------------------------------------------
 
-    private fun gga(offsetMs: Long, position: GeoPoint, altitudeMsl: Double): String {
+    private fun gga(
+        offsetMs: Long,
+        position: GeoPoint,
+        altitudeMsl: Double,
+    ): String {
         val lat = encodeLatitude(position.latitude)
         val lon = encodeLongitude(position.longitude)
-        val body = "GPGGA,${timeUtc(offsetMs)},${lat.first},${lat.second}," +
-            "${lon.first},${lon.second},1,08,1.0," +
-            "${formatFixed(altitudeMsl, 1, 1)},M,0.0,M,,"
+        val body =
+            "GPGGA,${timeUtc(offsetMs)},${lat.first},${lat.second}," +
+                "${lon.first},${lon.second},1,08,1.0," +
+                "${formatFixed(altitudeMsl, 1, 1)},M,0.0,M,,"
         return frame(body)
     }
 
-    private fun rmc(offsetMs: Long, position: GeoPoint, speedKnots: Double, courseDeg: Double): String {
+    private fun rmc(
+        offsetMs: Long,
+        position: GeoPoint,
+        speedKnots: Double,
+        courseDeg: Double,
+    ): String {
         val lat = encodeLatitude(position.latitude)
         val lon = encodeLongitude(position.longitude)
-        val body = "GPRMC,${timeUtc(offsetMs)},A,${lat.first},${lat.second}," +
-            "${lon.first},${lon.second}," +
-            "${formatFixed(speedKnots, 3, 1)},${formatFixed(courseDeg, 3, 1)},$RMC_DATE,,"
+        val body =
+            "GPRMC,${timeUtc(offsetMs)},A,${lat.first},${lat.second}," +
+                "${lon.first},${lon.second}," +
+                "${formatFixed(speedKnots, 3, 1)},${formatFixed(courseDeg, 3, 1)},$RMC_DATE,,"
         return frame(body)
     }
 
@@ -207,7 +229,10 @@ class SyntheticFlight(private val params: FlightParams) {
      * minutes. Rounding is done in units of 1e-4 minutes so a value like
      * 59.99996 minutes carries into the degrees field instead of printing 60.
      */
-    private fun encodeCoordinate(absDegrees: Double, degreeDigits: Int): String {
+    private fun encodeCoordinate(
+        absDegrees: Double,
+        degreeDigits: Int,
+    ): String {
         val totalMinutesE4 = (absDegrees * 60.0 * 10_000.0).roundToLong()
         val degrees = totalMinutesE4 / MINUTES_E4_PER_DEGREE
         val minutesE4 = totalMinutesE4 % MINUTES_E4_PER_DEGREE
@@ -219,7 +244,11 @@ class SyntheticFlight(private val params: FlightParams) {
      * Formats [value] with exactly [fracDigits] decimals and at least
      * [intDigits] integer digits (zero-padded), locale-independently.
      */
-    private fun formatFixed(value: Double, intDigits: Int, fracDigits: Int): String {
+    private fun formatFixed(
+        value: Double,
+        intDigits: Int,
+        fracDigits: Int,
+    ): String {
         var pow = 1L
         repeat(fracDigits) { pow *= 10L }
         val scaled = (abs(value) * pow).roundToLong()
@@ -227,7 +256,10 @@ class SyntheticFlight(private val params: FlightParams) {
         return sign + pad(scaled / pow, intDigits) + "." + pad(scaled % pow, fracDigits)
     }
 
-    private fun pad(value: Long, width: Int): String = value.toString().padStart(width, '0')
+    private fun pad(
+        value: Long,
+        width: Int,
+    ): String = value.toString().padStart(width, '0')
 
     // --- Geodesy -------------------------------------------------------------
 
@@ -236,7 +268,11 @@ class SyntheticFlight(private val params: FlightParams) {
      * [start] on initial bearing [bearingDeg] (standard spherical formula,
      * Earth radius [EARTH_RADIUS_METERS]).
      */
-    private fun destination(start: GeoPoint, bearingDeg: Double, distanceMeters: Double): GeoPoint {
+    private fun destination(
+        start: GeoPoint,
+        bearingDeg: Double,
+        distanceMeters: Double,
+    ): GeoPoint {
         if (distanceMeters == 0.0) return start
         val delta = distanceMeters / EARTH_RADIUS_METERS
         val theta = bearingDeg * DEG_TO_RAD
@@ -244,16 +280,17 @@ class SyntheticFlight(private val params: FlightParams) {
         val lambda1 = start.longitude * DEG_TO_RAD
         val sinPhi2 = sin(phi1) * cos(delta) + cos(phi1) * sin(delta) * cos(theta)
         val phi2 = asin(sinPhi2.coerceIn(-1.0, 1.0)) // rounding can exceed unity near a pole
-        val lambda2 = lambda1 + atan2(
-            sin(theta) * sin(delta) * cos(phi1),
-            cos(delta) - sin(phi1) * sin(phi2),
-        )
+        val lambda2 =
+            lambda1 +
+                atan2(
+                    sin(theta) * sin(delta) * cos(phi1),
+                    cos(delta) - sin(phi1) * sin(phi2),
+                )
         val lonDeg = ((lambda2 / DEG_TO_RAD + 540.0) % 360.0) - 180.0
         return GeoPoint(phi2 / DEG_TO_RAD, lonDeg)
     }
 
-    private fun normalizeBearing(bearingDeg: Double): Double =
-        ((bearingDeg % 360.0) + 360.0) % 360.0
+    private fun normalizeBearing(bearingDeg: Double): Double = ((bearingDeg % 360.0) + 360.0) % 360.0
 
     private companion object {
         const val PAD_SAMPLES = 5

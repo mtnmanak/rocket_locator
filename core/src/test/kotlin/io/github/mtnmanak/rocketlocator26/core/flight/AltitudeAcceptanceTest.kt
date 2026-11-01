@@ -77,9 +77,13 @@ class AltitudeAcceptanceTest {
     @Test
     fun horizontalFixDoesNotAdvanceAltitudeRateClock() {
         val tracker = seededTracker()
-        tracker.onResult(NmeaParseResult.Parsed(
-            RmcSentence("GP", "120000", true, 41.0, -106.0, 0.0, 0.0, null), "raw",
-        ), 5_000L)
+        tracker.onResult(
+            NmeaParseResult.Parsed(
+                RmcSentence("GP", "120000", true, 41.0, -106.0, 0.0, 0.0, null),
+                "raw",
+            ),
+            5_000L,
+        )
         val after = tracker.onResult(gga(8900.0), 6_000L)
         assertEquals(8900.0, after.altitudeMslMeters)
     }
@@ -112,11 +116,17 @@ class AltitudeAcceptanceTest {
         assertEquals(0.0, valid.maxAltitudeAglMeters)
     }
 
-    private fun seededTracker(): FlightTracker = FlightTracker().also {
-        it.onResult(gga(1500.0), 1_000L)
-    }
+    private fun seededTracker(): FlightTracker =
+        FlightTracker().also {
+            it.onResult(gga(1500.0), 1_000L)
+        }
 
-    private fun gga(altitude: Double?, quality: Int = 1): NmeaParseResult = NmeaParseResult.Parsed(
-        GgaSentence("GP", "120000", 40.0, -105.0, quality, 8, 0.9, altitude, null), "raw",
-    )
+    private fun gga(
+        altitude: Double?,
+        quality: Int = 1,
+    ): NmeaParseResult =
+        NmeaParseResult.Parsed(
+            GgaSentence("GP", "120000", 40.0, -105.0, quality, 8, 0.9, altitude, null),
+            "raw",
+        )
 }

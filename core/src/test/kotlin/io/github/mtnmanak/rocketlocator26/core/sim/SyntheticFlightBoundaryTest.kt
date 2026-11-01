@@ -19,28 +19,31 @@ class SyntheticFlightBoundaryTest {
 
     @Test
     fun nearPoleFlightGeneratesFiniteCoordinates() {
-        val params = FlightParams(
-            launch = GeoPoint(89.99171478, 0.0),
-            launchAltitudeMslMeters = 0.0,
-            apogeeAglMeters = 100.0,
-            ascentSeconds = 1.0,
-            descentSeconds = 1.0,
-            driftBearingDeg = 0.0,
-            driftDistanceMeters = 921.2757026530004,
-            sampleHz = 1,
-        )
-        val samples = assertDoesNotThrow<List<SimulatedSample>> {
-            SyntheticFlight(params).samples().toList()
-        }
+        val params =
+            FlightParams(
+                launch = GeoPoint(89.99171478, 0.0),
+                launchAltitudeMslMeters = 0.0,
+                apogeeAglMeters = 100.0,
+                ascentSeconds = 1.0,
+                descentSeconds = 1.0,
+                driftBearingDeg = 0.0,
+                driftDistanceMeters = 921.2757026530004,
+                sampleHz = 1,
+            )
+        val samples =
+            assertDoesNotThrow<List<SimulatedSample>> {
+                SyntheticFlight(params).samples().toList()
+            }
         assertEquals(17, samples.size)
         for (sample in samples) {
             assertEquals(2, sample.sentences.size)
             for (raw in sample.sentences) {
-                val (latitude, longitude) = when (val sentence = parsed(raw)) {
-                    is GgaSentence -> sentence.latitude to sentence.longitude
-                    is RmcSentence -> sentence.latitude to sentence.longitude
-                    else -> error("Unexpected simulated sentence: $sentence")
-                }
+                val (latitude, longitude) =
+                    when (val sentence = parsed(raw)) {
+                        is GgaSentence -> sentence.latitude to sentence.longitude
+                        is RmcSentence -> sentence.latitude to sentence.longitude
+                        else -> error("Unexpected simulated sentence: $sentence")
+                    }
                 assertTrue(latitude?.isFinite() == true, "Non-finite/missing latitude: $raw")
                 assertTrue(longitude?.isFinite() == true, "Non-finite/missing longitude: $raw")
             }
@@ -54,8 +57,17 @@ class SyntheticFlightBoundaryTest {
         sampleHz: Int,
         descentCount: Int,
     ) {
-        val params = FlightParams(GeoPoint(40.0, -105.0), 1500.0, 100.0, 1.0,
-            descentSeconds, 90.0, 400.0, sampleHz)
+        val params =
+            FlightParams(
+                GeoPoint(40.0, -105.0),
+                1500.0,
+                100.0,
+                1.0,
+                descentSeconds,
+                90.0,
+                400.0,
+                sampleHz,
+            )
         val samples = SyntheticFlight(params).samples().toList()
         val descentStart = 5 + sampleHz // five pad samples plus one second of ascent
         assertEquals(descentStart + descentCount + 10, samples.size)

@@ -19,7 +19,6 @@ import kotlin.math.sin
  * ordering differences.
  */
 class GeodesyTest {
-
     /** Distance tolerance for km-scale known answers, meters. */
     private val distTolShort = 1e-6
 
@@ -68,9 +67,10 @@ class GeodesyTest {
         val lat1 = from.latitude * PI / 180.0
         val lat2 = to.latitude * PI / 180.0
         val dLon = (to.longitude - from.longitude) * PI / 180.0
-        val central = acos(
-            (sin(lat1) * sin(lat2) + cos(lat1) * cos(lat2) * cos(dLon)).coerceIn(-1.0, 1.0),
-        )
+        val central =
+            acos(
+                (sin(lat1) * sin(lat2) + cos(lat1) * cos(lat2) * cos(dLon)).coerceIn(-1.0, 1.0),
+            )
         val expected = Geodesy.EARTH_RADIUS_METERS * central
         assertEquals(expected, Geodesy.distanceMeters(from, to), 1e-3)
     }
@@ -123,9 +123,15 @@ class GeodesyTest {
     fun `distance is never negative across a coordinate grid`() {
         val lats = listOf(-90.0, -45.0, 0.0, 45.0, 89.9, 90.0)
         val lons = listOf(-180.0, -90.0, 0.0, 90.0, 179.9, 180.0)
-        for (lat1 in lats) for (lon1 in lons) for (lat2 in lats) for (lon2 in lons) {
-            val d = Geodesy.distanceMeters(GeoPoint(lat1, lon1), GeoPoint(lat2, lon2))
-            assertTrue(d >= 0.0 && d.isFinite(), "d=$d for ($lat1,$lon1)->($lat2,$lon2)")
+        for (lat1 in lats) {
+            for (lon1 in lons) {
+                for (lat2 in lats) {
+                    for (lon2 in lons) {
+                        val d = Geodesy.distanceMeters(GeoPoint(lat1, lon1), GeoPoint(lat2, lon2))
+                        assertTrue(d >= 0.0 && d.isFinite(), "d=$d for ($lat1,$lon1)->($lat2,$lon2)")
+                    }
+                }
+            }
         }
     }
 
@@ -192,9 +198,15 @@ class GeodesyTest {
     fun `bearing is always in 0 until 360 across a coordinate grid`() {
         val coords = listOf(-89.0, -45.0, 0.0, 45.0, 89.0)
         val lons = listOf(-179.0, -90.0, 0.0, 90.0, 179.0)
-        for (lat1 in coords) for (lon1 in lons) for (lat2 in coords) for (lon2 in lons) {
-            val b = Geodesy.initialBearingDeg(GeoPoint(lat1, lon1), GeoPoint(lat2, lon2))
-            assertTrue(b >= 0.0 && b < 360.0, "b=$b for ($lat1,$lon1)->($lat2,$lon2)")
+        for (lat1 in coords) {
+            for (lon1 in lons) {
+                for (lat2 in coords) {
+                    for (lon2 in lons) {
+                        val b = Geodesy.initialBearingDeg(GeoPoint(lat1, lon1), GeoPoint(lat2, lon2))
+                        assertTrue(b >= 0.0 && b < 360.0, "b=$b for ($lat1,$lon1)->($lat2,$lon2)")
+                    }
+                }
+            }
         }
     }
 

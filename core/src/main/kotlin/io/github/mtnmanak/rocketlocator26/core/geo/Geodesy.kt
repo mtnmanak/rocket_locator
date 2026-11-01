@@ -17,7 +17,6 @@ import kotlin.math.sqrt
  * This is adequate for path decimation; revisit before Phase 3 displays distance.
  */
 object Geodesy {
-
     /** IUGG mean earth radius, in meters. */
     const val EARTH_RADIUS_METERS: Double = 6371008.8
 
@@ -31,7 +30,10 @@ object Geodesy {
      * Returns 0.0 for identical points. Always non-negative and finite for
      * finite inputs, including antipodal points and antimeridian crossings.
      */
-    fun distanceMeters(from: GeoPoint, to: GeoPoint): Double {
+    fun distanceMeters(
+        from: GeoPoint,
+        to: GeoPoint,
+    ): Double {
         val lat1 = from.latitude * DEG_TO_RAD
         val lat2 = to.latitude * DEG_TO_RAD
         val dLat = (to.latitude - from.latitude) * DEG_TO_RAD
@@ -39,8 +41,9 @@ object Geodesy {
 
         val sinDLat = sin(dLat / 2.0)
         val sinDLon = sin(dLon / 2.0)
-        val a = (sinDLat * sinDLat + cos(lat1) * cos(lat2) * sinDLon * sinDLon)
-            .coerceIn(0.0, 1.0) // guard rounding drift so sqrt(1 - a) never sees a negative
+        val a =
+            (sinDLat * sinDLat + cos(lat1) * cos(lat2) * sinDLon * sinDLon)
+                .coerceIn(0.0, 1.0) // guard rounding drift so sqrt(1 - a) never sees a negative
         val c = 2.0 * atan2(sqrt(a), sqrt(1.0 - a))
         return EARTH_RADIUS_METERS * c
     }
@@ -55,7 +58,10 @@ object Geodesy {
      * is likewise not meaningful, though a value in [0, 360) is still
      * returned rather than NaN.
      */
-    fun initialBearingDeg(from: GeoPoint, to: GeoPoint): Double {
+    fun initialBearingDeg(
+        from: GeoPoint,
+        to: GeoPoint,
+    ): Double {
         val lat1 = from.latitude * DEG_TO_RAD
         val lat2 = to.latitude * DEG_TO_RAD
         val dLon = (to.longitude - from.longitude) * DEG_TO_RAD
@@ -74,7 +80,10 @@ object Geodesy {
      * Inputs may be any finite degree values (negative or > 360); they are
      * normalized internally.
      */
-    fun relativeBearingDeg(headingDeg: Double, bearingDeg: Double): Double {
+    fun relativeBearingDeg(
+        headingDeg: Double,
+        bearingDeg: Double,
+    ): Double {
         val diff = normalizeDeg360(bearingDeg - headingDeg)
         return if (diff > 180.0) diff - 360.0 else diff
     }

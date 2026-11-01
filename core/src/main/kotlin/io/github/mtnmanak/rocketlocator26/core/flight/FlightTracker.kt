@@ -59,8 +59,9 @@ import kotlin.math.abs
  *
  * @param maxPathPoints maximum number of points retained in [RocketState.path].
  */
-class FlightTracker(private val maxPathPoints: Int = 10_000) {
-
+class FlightTracker(
+    private val maxPathPoints: Int = 10_000,
+) {
     /** Current immutable snapshot of the rocket's state. */
     var state: RocketState = RocketState()
         private set
@@ -78,21 +79,43 @@ class FlightTracker(private val maxPathPoints: Int = 10_000) {
      * @param nowMs receiver-local wall-clock time (epoch millis) of receipt.
      * @return the updated state snapshot (also available via [state]).
      */
-    fun onResult(result: NmeaParseResult, nowMs: Long): RocketState {
+    fun onResult(
+        result: NmeaParseResult,
+        nowMs: Long,
+    ): RocketState {
         val parsed = result as? NmeaParseResult.Parsed ?: return state
         // Any successfully parsed sentence proves the link is alive.
         var next = state.copy(lastSentenceAtMs = nowMs)
 
         when (val sentence = parsed.sentence) {
-            is GgaSentence -> next = applyGga(next, sentence, nowMs)
-            is RmcSentence -> next = applyRmc(next, sentence, nowMs)
-            is GllSentence -> next = applyGll(next, sentence, nowMs)
-            is VtgSentence -> next = next.copy(
-                speedKnots = sentence.speedKnots ?: next.speedKnots,
-                courseDeg = sentence.courseTrueDeg ?: next.courseDeg,
-            )
-            is GsaSentence -> Unit // link-alive timestamp only
-            is GsvSentence -> Unit // link-alive timestamp only
+            is GgaSentence -> {
+                next = applyGga(next, sentence, nowMs)
+            }
+
+            is RmcSentence -> {
+                next = applyRmc(next, sentence, nowMs)
+            }
+
+            is GllSentence -> {
+                next = applyGll(next, sentence, nowMs)
+            }
+
+            is VtgSentence -> {
+                next =
+                    next.copy(
+                        speedKnots = sentence.speedKnots ?: next.speedKnots,
+                        courseDeg = sentence.courseTrueDeg ?: next.courseDeg,
+                    )
+            }
+
+            is GsaSentence -> {
+                Unit
+            }
+
+            // link-alive timestamp only
+            is GsvSentence -> {
+                Unit
+            } // link-alive timestamp only
         }
 
         state = next
@@ -109,10 +132,11 @@ class FlightTracker(private val maxPathPoints: Int = 10_000) {
      */
     fun resetAltitudeBaseline() {
         baselineMslMeters = state.altitudeMslMeters
-        state = state.copy(
-            altitudeAglMeters = aglOf(state.altitudeMslMeters),
-            maxAltitudeAglMeters = aglOf(state.maxAltitudeMslMeters),
-        )
+        state =
+            state.copy(
+                altitudeAglMeters = aglOf(state.altitudeMslMeters),
+                maxAltitudeAglMeters = aglOf(state.maxAltitudeMslMeters),
+            )
     }
 
     /** Full reset to the initial state, including the altitude baseline. */
@@ -134,15 +158,23 @@ class FlightTracker(private val maxPathPoints: Int = 10_000) {
      * @param point last saved rocket position.
      * @param altitudeMslMeters last saved MSL altitude, if any was known.
      */
-    fun restoreLastPosition(point: GeoPoint, altitudeMslMeters: Double?) {
-        state = state.copy(
-            position = point,
-            altitudeMslMeters = altitudeMslMeters ?: state.altitudeMslMeters,
-            altitudeAglMeters = aglOf(altitudeMslMeters ?: state.altitudeMslMeters),
-        )
+    fun restoreLastPosition(
+        point: GeoPoint,
+        altitudeMslMeters: Double?,
+    ) {
+        state =
+            state.copy(
+                position = point,
+                altitudeMslMeters = altitudeMslMeters ?: state.altitudeMslMeters,
+                altitudeAglMeters = aglOf(altitudeMslMeters ?: state.altitudeMslMeters),
+            )
     }
 
-    private fun applyGga(current: RocketState, gga: GgaSentence, nowMs: Long): RocketState {
+    private fun applyGga(
+        current: RocketState,
+        gga: GgaSentence,
+        nowMs: Long,
+    ): RocketState {
         val lat = gga.latitude
         val lon = gga.longitude
         if (gga.fixQuality !in 1..5 || lat == null || lon == null) {
@@ -179,7 +211,11 @@ class FlightTracker(private val maxPathPoints: Int = 10_000) {
         )
     }
 
-    private fun applyRmc(current: RocketState, rmc: RmcSentence, nowMs: Long): RocketState {
+    private fun applyRmc(
+        current: RocketState,
+        rmc: RmcSentence,
+        nowMs: Long,
+    ): RocketState {
         val lat = rmc.latitude
         val lon = rmc.longitude
         if (!rmc.isValid || !isMeasuredMode(rmc.mode) || lat == null || lon == null) {
@@ -196,7 +232,11 @@ class FlightTracker(private val maxPathPoints: Int = 10_000) {
         )
     }
 
-    private fun applyGll(current: RocketState, gll: GllSentence, nowMs: Long): RocketState {
+    private fun applyGll(
+        current: RocketState,
+        gll: GllSentence,
+        nowMs: Long,
+    ): RocketState {
         val lat = gll.latitude
         val lon = gll.longitude
         if (!gll.isValid || !isMeasuredMode(gll.mode) || lat == null || lon == null) {
@@ -240,11 +280,13 @@ class FlightTracker(private val maxPathPoints: Int = 10_000) {
         return msl?.minus(baseline)
     }
 
-    private fun isMeasuredMode(mode: Char?): Boolean =
-        mode == null || mode in "ADFPR"
+    private fun isMeasuredMode(mode: Char?): Boolean = mode == null || mode in "ADFPR"
 
     /** Returns only accepted live samples; rejected samples never advance the gate. */
-    private fun acceptAltitude(altitude: Double?, nowMs: Long): Double? {
+    private fun acceptAltitude(
+        altitude: Double?,
+        nowMs: Long,
+    ): Double? {
         if (altitude == null || !altitude.isFinite() || altitude !in -1_000.0..120_000.0) return null
         val previous = lastAcceptedAltitudeMslMeters
         val previousAtMs = lastAcceptedAltitudeAtMs
@@ -258,11 +300,15 @@ class FlightTracker(private val maxPathPoints: Int = 10_000) {
         return altitude
     }
 
-    private fun maxOfNullable(a: Double?, b: Double?): Double? = when {
-        a == null -> b
-        b == null -> a
-        else -> maxOf(a, b)
-    }
+    private fun maxOfNullable(
+        a: Double?,
+        b: Double?,
+    ): Double? =
+        when {
+            a == null -> b
+            b == null -> a
+            else -> maxOf(a, b)
+        }
 
     private companion object {
         /** Minimum movement, in meters, before a new path point is recorded. */

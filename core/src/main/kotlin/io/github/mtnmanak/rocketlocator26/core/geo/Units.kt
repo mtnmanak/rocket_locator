@@ -6,7 +6,6 @@ package io.github.mtnmanak.rocketlocator26.core.geo
  * hence 1 knot = 1852/3600 m/s = 1.852 km/h exactly.
  */
 object Units {
-
     private const val METERS_PER_FOOT: Double = 0.3048
     private const val METERS_PER_MILE: Double = 1609.344
     private const val METERS_PER_NAUTICAL_MILE: Double = 1852.0

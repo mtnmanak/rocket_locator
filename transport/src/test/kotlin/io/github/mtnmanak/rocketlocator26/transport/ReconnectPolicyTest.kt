@@ -7,7 +7,6 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class ReconnectPolicyTest {
-
     @Test
     fun `default schedule doubles from one second and caps at fifteen`() {
         val policy = ReconnectPolicy()
@@ -48,7 +47,7 @@ class ReconnectPolicyTest {
     }
 
     @Test
-    fun R2C004_reconnectPolicyOverflow_staysPositiveAndCapped() {
+    fun customBoundsNeverOverflowAndStayCapped() {
         val initialDelayMs = 1L shl 62
         val maxDelayMs = Long.MAX_VALUE
         val policy = ReconnectPolicy(initialDelayMs = initialDelayMs, maxDelayMs = maxDelayMs)
@@ -56,8 +55,13 @@ class ReconnectPolicyTest {
         val delays = List(4) { policy.nextDelayMs() }
         assertAll(
             { assertTrue(delays.all { it > 0L && it <= maxDelayMs }, "Positive capped delays required: $delays ms") },
-            { assertEquals(listOf(initialDelayMs, maxDelayMs, maxDelayMs, maxDelayMs), delays,
-                "Doubling must saturate at the cap before Long overflow") },
+            {
+                assertEquals(
+                    listOf(initialDelayMs, maxDelayMs, maxDelayMs, maxDelayMs),
+                    delays,
+                    "Doubling must saturate at the cap before Long overflow",
+                )
+            },
         )
     }
 

@@ -87,16 +87,18 @@ fun DevicesScreen(
     var needsSettings by remember { mutableStateOf(false) }
     val refreshPermissions = {
         viewModel.refresh()
-        needsSettings = viewModel.permissionNeedsSettings { permission ->
-            activity?.let { ActivityCompat.shouldShowRequestPermissionRationale(it, permission) } ?: true
-        }
+        needsSettings =
+            viewModel.permissionNeedsSettings { permission ->
+                activity?.let { ActivityCompat.shouldShowRequestPermissionRationale(it, permission) } ?: true
+            }
     }
 
-    val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions(),
-    ) {
-        refreshPermissions()
-    }
+    val permissionLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestMultiplePermissions(),
+        ) {
+            refreshPermissions()
+        }
 
     // Permissions/toggles may change in system Settings while we're paused.
     LifecycleResumeEffect(viewModel, activity) {
@@ -125,11 +127,12 @@ fun DevicesScreen(
         },
     ) { innerPadding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             if (!hasPermissions) {
@@ -192,7 +195,10 @@ fun DevicesScreen(
 
 /** Flags a system-level blocker (Bluetooth off, Location off) the app cannot fix itself. */
 @Composable
-private fun EnvironmentCard(title: String, body: String) {
+private fun EnvironmentCard(
+    title: String,
+    body: String,
+) {
     SectionCard(title = title) {
         Text(
             text = body,
@@ -204,7 +210,11 @@ private fun EnvironmentCard(title: String, body: String) {
 
 /** Explains why Bluetooth permissions are needed, with a grant action. */
 @Composable
-private fun PermissionCard(needsSettings: Boolean, onGrant: () -> Unit, onOpenSettings: () -> Unit) {
+private fun PermissionCard(
+    needsSettings: Boolean,
+    onGrant: () -> Unit,
+    onOpenSettings: () -> Unit,
+) {
     SectionCard(title = stringResource(R.string.devices_permission_title)) {
         Text(
             text = stringResource(if (needsSettings) R.string.devices_permission_settings else R.string.devices_permission_rationale),
@@ -257,16 +267,24 @@ private fun PairedDevicesCard(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         when {
-            !hasBluetoothHardware -> EmptyHint(stringResource(R.string.devices_no_bluetooth))
-            devices.isEmpty() -> EmptyHint(stringResource(R.string.devices_none_paired))
-            else -> devices.forEach { device ->
-                DeviceRow(
-                    name = device.name,
-                    address = device.address,
-                    detail = null,
-                    connectEnabled = connectEnabled,
-                    onConnect = { onConnect(device.address, device.name) },
-                )
+            !hasBluetoothHardware -> {
+                EmptyHint(stringResource(R.string.devices_no_bluetooth))
+            }
+
+            devices.isEmpty() -> {
+                EmptyHint(stringResource(R.string.devices_none_paired))
+            }
+
+            else -> {
+                devices.forEach { device ->
+                    DeviceRow(
+                        name = device.name,
+                        address = device.address,
+                        detail = null,
+                        connectEnabled = connectEnabled,
+                        onConnect = { onConnect(device.address, device.name) },
+                    )
+                }
             }
         }
     }
@@ -353,9 +371,10 @@ private fun NmeaConsoleCard(lines: List<String>) {
             }
             LazyColumn(
                 state = listState,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(CONSOLE_HEIGHT),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(CONSOLE_HEIGHT),
             ) {
                 items(lines) { line ->
                     Text(
@@ -363,11 +382,12 @@ private fun NmeaConsoleCard(lines: List<String>) {
                         fontFamily = FontFamily.Monospace,
                         fontSize = 11.sp,
                         lineHeight = 14.sp,
-                        color = if (line.startsWith(ERROR_LINE_PREFIX)) {
-                            MaterialTheme.colorScheme.error
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
+                        color =
+                            if (line.startsWith(ERROR_LINE_PREFIX)) {
+                                MaterialTheme.colorScheme.error
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
                     )
                 }
             }
@@ -422,9 +442,10 @@ private fun SectionCard(
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
@@ -451,17 +472,20 @@ private const val ERROR_LINE_PREFIX = "[error]"
 
 /** Preserve light-theme defaults; dark labels use the existing accessible text token. */
 @Composable
-private fun devicesOutlinedButtonColors() = ButtonDefaults.outlinedButtonColors(
-    // WCAG sRGB luminance: (L(#F6FAFF) + .05) / (L(#123859) + .05) = 11.54:1.
-    contentColor = devicesOutlinedLabelColor(
-        darkTheme = isSystemInDarkTheme(),
-        onSurface = MaterialTheme.colorScheme.onSurface,
-        defaultColor = ButtonDefaults.outlinedButtonColors().contentColor,
-    ),
-)
+private fun devicesOutlinedButtonColors() =
+    ButtonDefaults.outlinedButtonColors(
+        // WCAG sRGB luminance: (L(#F6FAFF) + .05) / (L(#123859) + .05) = 11.54:1.
+        contentColor =
+            devicesOutlinedLabelColor(
+                darkTheme = isSystemInDarkTheme(),
+                onSurface = MaterialTheme.colorScheme.onSurface,
+                defaultColor = ButtonDefaults.outlinedButtonColors().contentColor,
+            ),
+    )
 
-private tailrec fun Context.findActivity(): Activity? = when (this) {
-    is Activity -> this
-    is ContextWrapper -> baseContext.findActivity()
-    else -> null
-}
+private tailrec fun Context.findActivity(): Activity? =
+    when (this) {
+        is Activity -> this
+        is ContextWrapper -> baseContext.findActivity()
+        else -> null
+    }

@@ -93,11 +93,20 @@ data class GsvSentence(
  * app crashed on this (pre-1.4.1 NPE bug) and we will not repeat that.
  */
 sealed interface NmeaParseResult {
-    data class Parsed(val sentence: NmeaSentence, val raw: String) : NmeaParseResult
+    data class Parsed(
+        val sentence: NmeaSentence,
+        val raw: String,
+    ) : NmeaParseResult
 
     /** Well-formed NMEA of a sentence type we don't decode (e.g. GST, ZDA). */
-    data class Unsupported(val type: String, val raw: String) : NmeaParseResult
+    data class Unsupported(
+        val type: String,
+        val raw: String,
+    ) : NmeaParseResult
 
     /** Not parseable: bad framing, failed checksum, malformed fields. */
-    data class Failed(val reason: String, val raw: String) : NmeaParseResult
+    data class Failed(
+        val reason: String,
+        val raw: String,
+    ) : NmeaParseResult
 }

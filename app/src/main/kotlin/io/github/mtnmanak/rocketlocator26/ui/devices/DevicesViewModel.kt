@@ -64,8 +64,9 @@ data class ScannedDevice(
  * - Connect/disconnect actions delegated to [TrackingService].
  * - Pass-through of the repository's [TelemetryUiState] for the live console.
  */
-class DevicesViewModel(application: Application) : AndroidViewModel(application) {
-
+class DevicesViewModel(
+    application: Application,
+) : AndroidViewModel(application) {
     private val bluetoothAdapter: BluetoothAdapter? =
         (application.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager)?.adapter
 
@@ -121,23 +122,27 @@ class DevicesViewModel(application: Application) : AndroidViewModel(application)
 
     private var scanStopJob: Job? = null
 
-    private val scanCallback = object : ScanCallback() {
-        override fun onScanResult(callbackType: Int, result: ScanResult) {
-            addScanResult(result)
-        }
+    private val scanCallback =
+        object : ScanCallback() {
+            override fun onScanResult(
+                callbackType: Int,
+                result: ScanResult,
+            ) {
+                addScanResult(result)
+            }
 
-        override fun onBatchScanResults(results: MutableList<ScanResult>) {
-            results.forEach(::addScanResult)
-        }
+            override fun onBatchScanResults(results: MutableList<ScanResult>) {
+                results.forEach(::addScanResult)
+            }
 
-        override fun onScanFailed(errorCode: Int) {
-            viewModelScope.launch {
-                scanStopJob?.cancel()
-                scanStopJob = null
-                scanStatus.failed(errorCode)
+            override fun onScanFailed(errorCode: Int) {
+                viewModelScope.launch {
+                    scanStopJob?.cancel()
+                    scanStopJob = null
+                    scanStatus.failed(errorCode)
+                }
             }
         }
-    }
 
     init {
         refresh()
@@ -152,24 +157,35 @@ class DevicesViewModel(application: Application) : AndroidViewModel(application)
      * API 26-30: ACCESS_FINE_LOCATION, required for Bluetooth discovery/scan;
      * connect-only paths on those versions need no runtime permission.
      */
-    fun requiredPermissions(): Array<String> = when {
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> arrayOf(
-            Manifest.permission.BLUETOOTH_CONNECT,
-            Manifest.permission.BLUETOOTH_SCAN,
-            Manifest.permission.POST_NOTIFICATIONS,
-        )
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> arrayOf(
-            Manifest.permission.BLUETOOTH_CONNECT,
-            Manifest.permission.BLUETOOTH_SCAN,
-        )
-        else -> arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
-    }
+    fun requiredPermissions(): Array<String> =
+        when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> {
+                arrayOf(
+                    Manifest.permission.BLUETOOTH_CONNECT,
+                    Manifest.permission.BLUETOOTH_SCAN,
+                    Manifest.permission.POST_NOTIFICATIONS,
+                )
+            }
+
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+                arrayOf(
+                    Manifest.permission.BLUETOOTH_CONNECT,
+                    Manifest.permission.BLUETOOTH_SCAN,
+                )
+            }
+
+            else -> {
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
+            }
+        }
 
     /** Record each blocking permission before opening Android's request dialog. */
     fun markPermissionsRequested() {
-        permissionHistory.edit().apply {
-            blockingPermissions().forEach { putBoolean(it, true) }
-        }.apply()
+        permissionHistory
+            .edit()
+            .apply {
+                blockingPermissions().forEach { putBoolean(it, true) }
+            }.apply()
     }
 
     /** Called with the Activity's rationale check after a result and on resume. */
@@ -177,8 +193,9 @@ class DevicesViewModel(application: Application) : AndroidViewModel(application)
         needsPermissionSettings(
             blockingPermissions().map { permission ->
                 PermissionStatus(
-                    granted = ContextCompat.checkSelfPermission(getApplication(), permission) ==
-                        PackageManager.PERMISSION_GRANTED,
+                    granted =
+                        ContextCompat.checkSelfPermission(getApplication(), permission) ==
+                            PackageManager.PERMISSION_GRANTED,
                     requestedBefore = permissionHistory.getBoolean(permission, false),
                     showRationale = showRationale(permission),
                 )
@@ -210,9 +227,11 @@ class DevicesViewModel(application: Application) : AndroidViewModel(application)
         if (!_hasPermissions.value || !_isBluetoothEnabled.value || !_isLocationEnabled.value) return
         val scanner = bluetoothAdapter?.bluetoothLeScanner ?: return
         _scanResults.value = emptyList()
-        val settings = ScanSettings.Builder()
-            .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
-            .build()
+        val settings =
+            ScanSettings
+                .Builder()
+                .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
+                .build()
         scanStatus.started()
         try {
             scanner.startScan(null, settings, scanCallback)
@@ -228,10 +247,11 @@ class DevicesViewModel(application: Application) : AndroidViewModel(application)
         }
         if (!isScanning.value) return // A synchronous failure already published its error.
         scanStopJob?.cancel()
-        scanStopJob = viewModelScope.launch {
-            delay(SCAN_DURATION_MS)
-            stopScanInternal()
-        }
+        scanStopJob =
+            viewModelScope.launch {
+                delay(SCAN_DURATION_MS)
+                stopScanInternal()
+            }
     }
 
     /** Stops a running BLE scan immediately. Safe to call when not scanning. */
@@ -242,13 +262,19 @@ class DevicesViewModel(application: Application) : AndroidViewModel(application)
     }
 
     /** Connects to a Bluetooth Classic (SPP) receiver via [TrackingService]. */
-    fun connectClassic(address: String, name: String?) {
+    fun connectClassic(
+        address: String,
+        name: String?,
+    ) {
         stopBleScan()
         TrackingService.startClassic(getApplication(), address, name)
     }
 
     /** Connects to a BLE (FFE0-style) receiver via [TrackingService]. */
-    fun connectBle(address: String, name: String?) {
+    fun connectBle(
+        address: String,
+        name: String?,
+    ) {
         stopBleScan()
         TrackingService.startBle(getApplication(), address, name)
     }
@@ -268,12 +294,11 @@ class DevicesViewModel(application: Application) : AndroidViewModel(application)
      * work; intentionally narrower than [requiredPermissions] because
      * POST_NOTIFICATIONS must never gate anything.
      */
-    private fun hasBlockingPermissions(): Boolean {
-        return blockingPermissions().all { permission ->
+    private fun hasBlockingPermissions(): Boolean =
+        blockingPermissions().all { permission ->
             ContextCompat.checkSelfPermission(getApplication(), permission) ==
                 PackageManager.PERMISSION_GRANTED
         }
-    }
 
     private fun blockingPermissions(): Array<String> =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -310,20 +335,22 @@ class DevicesViewModel(application: Application) : AndroidViewModel(application)
 
     private fun addScanResult(result: ScanResult) {
         val address = result.device?.address ?: return
-        val name = try {
-            result.device.name ?: result.scanRecord?.deviceName
-        } catch (_: SecurityException) {
-            null
-        }
+        val name =
+            try {
+                result.device.name ?: result.scanRecord?.deviceName
+            } catch (_: SecurityException) {
+                null
+            }
         _scanResults.update { current ->
             val index = current.indexOfFirst { it.address == address }
             if (index >= 0) {
                 // Keep a previously seen name if this advertisement lacks one.
-                val merged = ScannedDevice(
-                    name = name ?: current[index].name,
-                    address = address,
-                    rssi = result.rssi,
-                )
+                val merged =
+                    ScannedDevice(
+                        name = name ?: current[index].name,
+                        address = address,
+                        rssi = result.rssi,
+                    )
                 current.toMutableList().apply { this[index] = merged }
             } else {
                 current + ScannedDevice(name = name, address = address, rssi = result.rssi)

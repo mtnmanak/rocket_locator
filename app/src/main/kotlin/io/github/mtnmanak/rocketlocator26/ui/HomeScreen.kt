@@ -145,11 +145,12 @@ fun HomeContent(
         },
     ) { innerPadding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             ActionRow(
@@ -215,10 +216,11 @@ private fun ActionRow(
         } else {
             Button(
                 onClick = onDisconnect,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error,
-                    contentColor = MaterialTheme.colorScheme.onError,
-                ),
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError,
+                    ),
             ) {
                 Text(stringResource(R.string.btn_disconnect))
             }
@@ -275,21 +277,23 @@ internal fun ConnectionStateChip(
 
 /** Color coding shared by home and devices screens: green up, amber pending. */
 @Composable
-internal fun connectionStateColor(state: ConnectionState): Color = when (state) {
-    ConnectionState.CONNECTED -> MaterialTheme.mmrColors.success
-    ConnectionState.CONNECTING -> MaterialTheme.mmrColors.warning
-    ConnectionState.DISCONNECTED -> MaterialTheme.colorScheme.onSurfaceVariant
-}
+internal fun connectionStateColor(state: ConnectionState): Color =
+    when (state) {
+        ConnectionState.CONNECTED -> MaterialTheme.mmrColors.success
+        ConnectionState.CONNECTING -> MaterialTheme.mmrColors.warning
+        ConnectionState.DISCONNECTED -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
 
 /** Localized label for a [ConnectionState]. */
 @Composable
-internal fun connectionStateLabel(state: ConnectionState): String = stringResource(
-    when (state) {
-        ConnectionState.CONNECTED -> R.string.status_connected
-        ConnectionState.CONNECTING -> R.string.status_connecting
-        ConnectionState.DISCONNECTED -> R.string.status_disconnected
-    },
-)
+internal fun connectionStateLabel(state: ConnectionState): String =
+    stringResource(
+        when (state) {
+            ConnectionState.CONNECTED -> R.string.status_connected
+            ConnectionState.CONNECTING -> R.string.status_connecting
+            ConnectionState.DISCONNECTED -> R.string.status_disconnected
+        },
+    )
 
 @Composable
 private fun ConnectionCard(
@@ -311,11 +315,12 @@ private fun ConnectionCard(
                 modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = if (connectionState == ConnectionState.DISCONNECTED) {
-                    MaterialTheme.colorScheme.error
-                } else {
-                    connectionStateColor(connectionState)
-                },
+                color =
+                    if (connectionState == ConnectionState.DISCONNECTED) {
+                        MaterialTheme.colorScheme.error
+                    } else {
+                        connectionStateColor(connectionState)
+                    },
             )
         }
         FixQualityValue(rocket, awaitingFix, now)
@@ -327,7 +332,11 @@ private fun ConnectionCard(
 }
 
 @Composable
-private fun PositionCard(rocket: RocketState, awaitingFix: Boolean, now: State<Long>) {
+private fun PositionCard(
+    rocket: RocketState,
+    awaitingFix: Boolean,
+    now: State<Long>,
+) {
     TelemetryCard(
         title = stringResource(R.string.card_position),
         heading = { PositionHeading(rocket, awaitingFix, now) },
@@ -349,20 +358,29 @@ private fun PositionCard(rocket: RocketState, awaitingFix: Boolean, now: State<L
 /** Lifecycle collection stops this cold flow while Home is off-screen. */
 @Composable
 private fun rememberFixClock(enabled: Boolean): State<Long> {
-    val ticks = remember(enabled) {
-        fixClockTicks(enabled)
-    }
+    val ticks =
+        remember(enabled) {
+            fixClockTicks(enabled)
+        }
     return ticks.collectAsStateWithLifecycle(initialValue = System.currentTimeMillis())
 }
 
 @Composable
-private fun staleState(rocket: RocketState, awaitingFix: Boolean, now: State<Long>): State<Boolean> =
+private fun staleState(
+    rocket: RocketState,
+    awaitingFix: Boolean,
+    now: State<Long>,
+): State<Boolean> =
     remember(rocket, awaitingFix, now) {
         derivedStateOf { isPositionStale(rocket, awaitingFix, now.value) }
     }
 
 @Composable
-private fun PositionHeading(rocket: RocketState, awaitingFix: Boolean, now: State<Long>) {
+private fun PositionHeading(
+    rocket: RocketState,
+    awaitingFix: Boolean,
+    now: State<Long>,
+) {
     val stale by staleState(rocket, awaitingFix, now)
     Row(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -379,7 +397,11 @@ private fun PositionHeading(rocket: RocketState, awaitingFix: Boolean, now: Stat
 }
 
 @Composable
-private fun FixQualityValue(rocket: RocketState, awaitingFix: Boolean, now: State<Long>) {
+private fun FixQualityValue(
+    rocket: RocketState,
+    awaitingFix: Boolean,
+    now: State<Long>,
+) {
     val stale by staleState(rocket, awaitingFix, now)
     LabeledValue(
         label = stringResource(R.string.label_fix_quality),
@@ -388,27 +410,34 @@ private fun FixQualityValue(rocket: RocketState, awaitingFix: Boolean, now: Stat
 }
 
 @Composable
-private fun FixAgeText(rocket: RocketState, awaitingFix: Boolean, now: State<Long>) {
+private fun FixAgeText(
+    rocket: RocketState,
+    awaitingFix: Boolean,
+    now: State<Long>,
+) {
     val ageMs = rocket.fixAgeMs(now.value)
     val stale = isPositionStale(rocket, awaitingFix, now.value)
-    val age = ageMs?.let {
-        formatFixAge(
-            it,
-            stringResource(R.string.age_seconds),
-            stringResource(R.string.age_minutes),
-            stringResource(R.string.age_hours),
-        )
-    }
-    val spokenAge = ageMs?.let {
-        val (value, unit) = fixAgeParts(it)
-        val plural = when (unit) {
-            AgeUnit.SECONDS -> R.plurals.age_seconds_spoken
-            AgeUnit.MINUTES -> R.plurals.age_minutes_spoken
-            AgeUnit.HOURS -> R.plurals.age_hours_spoken
+    val age =
+        ageMs?.let {
+            formatFixAge(
+                it,
+                stringResource(R.string.age_seconds),
+                stringResource(R.string.age_minutes),
+                stringResource(R.string.age_hours),
+            )
         }
-        val count = value.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
-        pluralStringResource(plural, count, count)
-    }
+    val spokenAge =
+        ageMs?.let {
+            val (value, unit) = fixAgeParts(it)
+            val plural =
+                when (unit) {
+                    AgeUnit.SECONDS -> R.plurals.age_seconds_spoken
+                    AgeUnit.MINUTES -> R.plurals.age_minutes_spoken
+                    AgeUnit.HOURS -> R.plurals.age_hours_spoken
+                }
+            val count = value.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+            pluralStringResource(plural, count, count)
+        }
     val label = if (stale) R.string.fix_age_stale else R.string.fix_age_live
     val spoken = if (spokenAge == null) stringResource(R.string.fix_age_unknown) else stringResource(label, spokenAge)
     Text(
@@ -468,12 +497,15 @@ private fun TelemetryCard(
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            if (heading != null) heading() else {
+            if (heading != null) {
+                heading()
+            } else {
                 Text(
                     text = title,
                     style = MaterialTheme.typography.labelLarge,
@@ -508,20 +540,19 @@ private fun LabeledValue(
 
 private const val PLACEHOLDER = "—"
 
-private fun formatDegrees(degrees: Double): String =
-    String.format(Locale.US, "%.6f°", degrees)
+private fun formatDegrees(degrees: Double): String = String.format(Locale.US, "%.6f°", degrees)
 
-private fun formatMeters(meters: Double): String =
-    String.format(Locale.US, "%.1f m", meters)
+private fun formatMeters(meters: Double): String = String.format(Locale.US, "%.1f m", meters)
 
 @Composable
-private fun fixQualityText(fixQuality: Int): String = when (fixQuality) {
-    0 -> stringResource(R.string.fix_none)
-    1 -> stringResource(R.string.fix_gps)
-    2 -> stringResource(R.string.fix_dgps)
-    3 -> stringResource(R.string.fix_pps)
-    4 -> stringResource(R.string.fix_rtk_fixed)
-    5 -> stringResource(R.string.fix_rtk_float)
-    6 -> stringResource(R.string.fix_dead_reckoning)
-    else -> stringResource(R.string.fix_unknown, fixQuality)
-}
+private fun fixQualityText(fixQuality: Int): String =
+    when (fixQuality) {
+        0 -> stringResource(R.string.fix_none)
+        1 -> stringResource(R.string.fix_gps)
+        2 -> stringResource(R.string.fix_dgps)
+        3 -> stringResource(R.string.fix_pps)
+        4 -> stringResource(R.string.fix_rtk_fixed)
+        5 -> stringResource(R.string.fix_rtk_float)
+        6 -> stringResource(R.string.fix_dead_reckoning)
+        else -> stringResource(R.string.fix_unknown, fixQuality)
+    }

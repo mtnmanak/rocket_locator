@@ -33,7 +33,6 @@ class SimulatorSource internal constructor(
     private val timeScale: Double,
     private val nowMs: () -> Long,
 ) : NmeaSource {
-
     constructor(samplesProvider: () -> Sequence<SimulatedSample>, timeScale: Double = 1.0) :
         this(samplesProvider, timeScale, { System.nanoTime() / 1_000_000 })
 
@@ -47,18 +46,19 @@ class SimulatorSource internal constructor(
 
     override val name: String = "Simulator"
 
-    override fun events(): Flow<SourceEvent> = flow {
-        val startMs = nowMs()
-        emit(SourceEvent.Connected)
-        for (sample in samplesProvider()) {
-            val targetMs = (sample.timeOffsetMs / timeScale).toLong()
-            // Include collector work in elapsed time. Late samples never wait.
-            val elapsedMs = nowMs() - startMs
-            delay(if (targetMs > elapsedMs) targetMs - elapsedMs else 0)
-            for (sentence in sample.sentences) {
-                emit(SourceEvent.LineReceived(raw = sentence, timestampMs = targetMs))
+    override fun events(): Flow<SourceEvent> =
+        flow {
+            val startMs = nowMs()
+            emit(SourceEvent.Connected)
+            for (sample in samplesProvider()) {
+                val targetMs = (sample.timeOffsetMs / timeScale).toLong()
+                // Include collector work in elapsed time. Late samples never wait.
+                val elapsedMs = nowMs() - startMs
+                delay(if (targetMs > elapsedMs) targetMs - elapsedMs else 0)
+                for (sentence in sample.sentences) {
+                    emit(SourceEvent.LineReceived(raw = sentence, timestampMs = targetMs))
+                }
             }
+            emit(SourceEvent.Disconnected)
         }
-        emit(SourceEvent.Disconnected)
-    }
 }

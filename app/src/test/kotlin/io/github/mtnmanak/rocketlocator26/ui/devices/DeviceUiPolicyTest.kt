@@ -21,31 +21,46 @@ class DeviceUiPolicyTest {
     @Test
     fun settingsGrantClearsDeadEndEvenWhenRationaleRemainsFalse() {
         assertFalse(needsPermissionSettings(listOf(PermissionStatus(true, true, false))))
-        assertTrue(needsPermissionSettings(listOf(
-            PermissionStatus(true, true, false), PermissionStatus(false, true, false),
-        )))
-        assertFalse(needsPermissionSettings(listOf(
-            PermissionStatus(true, true, false), PermissionStatus(false, false, false),
-        )))
+        assertTrue(
+            needsPermissionSettings(
+                listOf(
+                    PermissionStatus(true, true, false),
+                    PermissionStatus(false, true, false),
+                ),
+            ),
+        )
+        assertFalse(
+            needsPermissionSettings(
+                listOf(
+                    PermissionStatus(true, true, false),
+                    PermissionStatus(false, false, false),
+                ),
+            ),
+        )
     }
 
     @ParameterizedTest
     @CsvSource("Tracker,AA:BB,Tracker", ",AA:BB,AA:BB", "'   ',AA:BB,AA:BB")
-    fun connectAccessibilityTargetUsesNameOrAddress(name: String?, address: String, expected: String) {
+    fun connectAccessibilityTargetUsesNameOrAddress(
+        name: String?,
+        address: String,
+        expected: String,
+    ) {
         assertEquals(expected, deviceConnectTarget(name, address))
     }
 
     @Test
     fun scanFailureRetainsCodeAndSpecificRecoveryMessage() {
-        val messages = mapOf(
-            1 to R.string.scan_error_already_started,
-            2 to R.string.scan_error_registration,
-            3 to R.string.scan_error_internal,
-            4 to R.string.scan_error_unsupported,
-            5 to R.string.scan_error_resources,
-            6 to R.string.scan_error_too_frequent,
-            99 to R.string.scan_error_unknown,
-        )
+        val messages =
+            mapOf(
+                1 to R.string.scan_error_already_started,
+                2 to R.string.scan_error_registration,
+                3 to R.string.scan_error_internal,
+                4 to R.string.scan_error_unsupported,
+                5 to R.string.scan_error_resources,
+                6 to R.string.scan_error_too_frequent,
+                99 to R.string.scan_error_unknown,
+            )
         messages.forEach { (code, messageRes) ->
             assertEquals(BleScanError(code, messageRes), bleScanError(code))
         }

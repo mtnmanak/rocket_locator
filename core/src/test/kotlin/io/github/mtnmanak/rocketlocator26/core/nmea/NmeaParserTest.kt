@@ -15,7 +15,6 @@ import kotlin.random.Random
  * between '$' and '*', expressed as two uppercase hex digits.
  */
 class NmeaParserTest {
-
     private val parser = NmeaParser()
 
     /** Tolerance for decimal-degree comparisons. */
@@ -51,7 +50,6 @@ class NmeaParserTest {
 
     @Nested
     inner class GgaDecoding {
-
         @Test
         fun `canonical GGA fixture decodes fully`() {
             val s = parsed(canonicalGga) as GgaSentence
@@ -76,9 +74,10 @@ class NmeaParserTest {
         fun `southern and western hemispheres are negative`() {
             // 3345.678 S  -> -(33 + 45.678/60) = -33.7613
             // 15112.345 W -> -(151 + 12.345/60) = -151.20575
-            val s = parsed(
-                "\$GPGGA,123519,3345.678,S,15112.345,W,1,08,0.9,10.0,M,,M,,*62",
-            ) as GgaSentence
+            val s =
+                parsed(
+                    "\$GPGGA,123519,3345.678,S,15112.345,W,1,08,0.9,10.0,M,,M,,*62",
+                ) as GgaSentence
             assertEquals(-(33.0 + 45.678 / 60.0), s.latitude!!, eps)
             assertEquals(-33.7613, s.latitude!!, eps)
             assertEquals(-(151.0 + 12.345 / 60.0), s.longitude!!, eps)
@@ -100,9 +99,10 @@ class NmeaParserTest {
 
         @Test
         fun `malformed fix quality decodes to zero not Failed`() {
-            val s = parsed(
-                "\$GPGGA,123519,4807.038,N,01131.000,E,X,08,0.9,545.4,M,46.9,M,,*2E",
-            ) as GgaSentence
+            val s =
+                parsed(
+                    "\$GPGGA,123519,4807.038,N,01131.000,E,X,08,0.9,545.4,M,46.9,M,,*2E",
+                ) as GgaSentence
             assertEquals(0, s.fixQuality)
             // The rest of the sentence still decodes.
             assertEquals(canonicalLat, s.latitude!!, eps)
@@ -110,17 +110,19 @@ class NmeaParserTest {
 
         @Test
         fun `empty fix quality decodes to zero`() {
-            val s = parsed(
-                "\$GPGGA,123519,4807.038,N,01131.000,E,,08,0.9,545.4,M,46.9,M,,*76",
-            ) as GgaSentence
+            val s =
+                parsed(
+                    "\$GPGGA,123519,4807.038,N,01131.000,E,,08,0.9,545.4,M,46.9,M,,*76",
+                ) as GgaSentence
             assertEquals(0, s.fixQuality)
         }
 
         @Test
         fun `malformed latitude digits decode to null latitude only`() {
-            val s = parsed(
-                "\$GPGGA,123519,ABCD.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,",
-            ) as GgaSentence
+            val s =
+                parsed(
+                    "\$GPGGA,123519,ABCD.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,",
+                ) as GgaSentence
             assertNull(s.latitude)
             assertEquals(canonicalLon, s.longitude!!, eps)
             assertEquals(1, s.fixQuality)
@@ -128,52 +130,58 @@ class NmeaParserTest {
 
         @Test
         fun `latitude with missing hemisphere is null`() {
-            val s = parsed(
-                "\$GPGGA,123519,4807.038,,01131.000,E,1,08,0.9,545.4,M,46.9,M,,",
-            ) as GgaSentence
+            val s =
+                parsed(
+                    "\$GPGGA,123519,4807.038,,01131.000,E,1,08,0.9,545.4,M,46.9,M,,",
+                ) as GgaSentence
             assertNull(s.latitude)
             assertEquals(canonicalLon, s.longitude!!, eps)
         }
 
         @Test
         fun `latitude with unknown hemisphere letter is null not wrong-signed`() {
-            val s = parsed(
-                "\$GPGGA,123519,4807.038,Q,01131.000,E,1,08,0.9,545.4,M,46.9,M,,",
-            ) as GgaSentence
+            val s =
+                parsed(
+                    "\$GPGGA,123519,4807.038,Q,01131.000,E,1,08,0.9,545.4,M,46.9,M,,",
+                ) as GgaSentence
             assertNull(s.latitude)
         }
 
         @Test
         fun `coordinate with minutes of 60 or more is null`() {
             // 4877.0 would be 48 degrees 77 minutes: impossible.
-            val s = parsed(
-                "\$GPGGA,123519,4877.000,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,",
-            ) as GgaSentence
+            val s =
+                parsed(
+                    "\$GPGGA,123519,4877.000,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,",
+                ) as GgaSentence
             assertNull(s.latitude)
         }
 
         @Test
         fun `latitude beyond 90 degrees is null`() {
-            val s = parsed(
-                "\$GPGGA,123519,9130.000,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,",
-            ) as GgaSentence
+            val s =
+                parsed(
+                    "\$GPGGA,123519,9130.000,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,",
+                ) as GgaSentence
             assertNull(s.latitude)
         }
 
         @Test
         fun `NaN in coordinate and hdop fields decodes to null`() {
-            val s = parsed(
-                "\$GPGGA,123519,NaN,N,01131.000,E,1,08,NaN,545.4,M,46.9,M,,",
-            ) as GgaSentence
+            val s =
+                parsed(
+                    "\$GPGGA,123519,NaN,N,01131.000,E,1,08,NaN,545.4,M,46.9,M,,",
+                ) as GgaSentence
             assertNull(s.latitude)
             assertNull(s.hdop)
         }
 
         @Test
         fun `extra fields beyond the expected count are ignored`() {
-            val s = parsed(
-                "\$GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,,extra1,extra2",
-            ) as GgaSentence
+            val s =
+                parsed(
+                    "\$GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,,extra1,extra2",
+                ) as GgaSentence
             assertEquals(canonicalLat, s.latitude!!, eps)
             assertEquals(545.4, s.altitudeMslMeters!!, eps)
         }
@@ -191,7 +199,6 @@ class NmeaParserTest {
 
     @Nested
     inner class RmcDecoding {
-
         @Test
         fun `canonical RMC fixture decodes fully`() {
             val s = parsed(canonicalRmc) as RmcSentence
@@ -226,7 +233,6 @@ class NmeaParserTest {
 
     @Nested
     inner class OtherSentenceTypes {
-
         @Test
         fun `GLL decodes position time and validity`() {
             // 4916.45 N   -> 49 + 16.45/60  = 49.27416666...
@@ -269,9 +275,10 @@ class NmeaParserTest {
 
         @Test
         fun `GSV decodes message counts and satellites in view`() {
-            val s = parsed(
-                "\$GPGSV,2,1,08,01,40,083,46,02,17,308,41,12,07,344,39,14,22,228,45*75",
-            ) as GsvSentence
+            val s =
+                parsed(
+                    "\$GPGSV,2,1,08,01,40,083,46,02,17,308,41,12,07,344,39,14,22,228,45*75",
+                ) as GsvSentence
             assertEquals("GP", s.talker)
             assertEquals(2, s.totalMessages)
             assertEquals(1, s.messageNumber)
@@ -281,21 +288,22 @@ class NmeaParserTest {
 
     @Nested
     inner class Talkers {
-
         @Test
         fun `GN talker GGA is accepted`() {
-            val s = parsed(
-                "\$GNGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,*59",
-            ) as GgaSentence
+            val s =
+                parsed(
+                    "\$GNGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,*59",
+                ) as GgaSentence
             assertEquals("GN", s.talker)
             assertEquals(canonicalLat, s.latitude!!, eps)
         }
 
         @Test
         fun `GN talker RMC is accepted`() {
-            val s = parsed(
-                "\$GNRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,003.1,W*74",
-            ) as RmcSentence
+            val s =
+                parsed(
+                    "\$GNRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,003.1,W*74",
+                ) as RmcSentence
             assertEquals("GN", s.talker)
             assertTrue(s.isValid)
         }
@@ -314,9 +322,10 @@ class NmeaParserTest {
 
         @Test
         fun `GB talker GSV is accepted`() {
-            val s = parsed(
-                "\$GBGSV,3,2,11,09,12,034,,10,45,176,42,20,05,290,,23,70,010,38*61",
-            ) as GsvSentence
+            val s =
+                parsed(
+                    "\$GBGSV,3,2,11,09,12,034,,10,45,176,42,20,05,290,,23,70,010,38*61",
+                ) as GsvSentence
             assertEquals("GB", s.talker)
             assertEquals(11, s.satellitesInView)
         }
@@ -330,7 +339,6 @@ class NmeaParserTest {
 
     @Nested
     inner class Checksums {
-
         @Test
         fun `checksum mismatch is Failed`() {
             val corrupted = canonicalGga.dropLast(2) + "48"
@@ -372,7 +380,6 @@ class NmeaParserTest {
 
     @Nested
     inner class Framing {
-
         @Test
         fun `trailing CRLF is trimmed`() {
             val s = parsed(canonicalGga + "\r\n") as GgaSentence
@@ -418,10 +425,10 @@ class NmeaParserTest {
 
         @Test
         fun `malformed address is Failed`() {
-            failed("\$GPGG,1,2,3")     // 4-char address
-            failed("\$GPGGA1,1,2,3")   // 6-char address
-            failed("\$G2GGA,1,2,3")    // digit in talker
-            failed("\$,1,2,3")          // empty address
+            failed("\$GPGG,1,2,3") // 4-char address
+            failed("\$GPGGA1,1,2,3") // 6-char address
+            failed("\$G2GGA,1,2,3") // digit in talker
+            failed("\$,1,2,3") // empty address
         }
 
         @Test
@@ -435,7 +442,6 @@ class NmeaParserTest {
 
     @Nested
     inner class UnsupportedSentences {
-
         @Test
         fun `GST is Unsupported with its type`() {
             val u = unsupported("\$GPGST,172814.0,0.006,0.023,0.020,273.6,0.023,0.020,0.031*6A")
@@ -458,7 +464,6 @@ class NmeaParserTest {
 
     @Nested
     inner class Robustness {
-
         @Test
         fun `megabyte-long line does not throw`() {
             val huge = "\$GPGGA," + "9".repeat(1_000_000)
@@ -485,15 +490,16 @@ class NmeaParserTest {
             val structural = charArrayOf('$', '*', ',', '.', 'N', 'S', 'E', 'W', 'G', 'P', 'A')
             repeat(1000) { iteration ->
                 val length = random.nextInt(0, 300)
-                val chars = CharArray(length) {
-                    // Bias toward NMEA structural characters so the fuzzer
-                    // reaches deep parser paths, not just the framing checks.
-                    if (random.nextInt(4) == 0) {
-                        structural[random.nextInt(structural.size)]
-                    } else {
-                        Char(random.nextInt(0, 256))
+                val chars =
+                    CharArray(length) {
+                        // Bias toward NMEA structural characters so the fuzzer
+                        // reaches deep parser paths, not just the framing checks.
+                        if (random.nextInt(4) == 0) {
+                            structural[random.nextInt(structural.size)]
+                        } else {
+                            Char(random.nextInt(0, 256))
+                        }
                     }
-                }
                 val line = String(chars)
                 try {
                     parser.parse(line)

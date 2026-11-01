@@ -20,8 +20,9 @@ import kotlinx.coroutines.flow.StateFlow
  * state of its own — it only exposes the repository's state flow and a
  * couple of user actions.
  */
-class HomeViewModel(application: Application) : AndroidViewModel(application) {
-
+class HomeViewModel(
+    application: Application,
+) : AndroidViewModel(application) {
     private val repository = (application as RocketLocatorApp).telemetry
 
     /** Observable telemetry snapshot for the home screen. */
@@ -36,17 +37,18 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         repository.newFlight()
         repository.connect(
             SimulatorSource(
-                flight = SyntheticFlight(
-                    FlightParams(
-                        launch = GeoPoint(latitude = 40.8838, longitude = -119.1178),
-                        launchAltitudeMslMeters = 1191.0,
-                        apogeeAglMeters = 3048.0,
-                        ascentSeconds = 25.0,
-                        descentSeconds = 180.0,
-                        driftBearingDeg = 135.0,
-                        driftDistanceMeters = 800.0,
+                flight =
+                    SyntheticFlight(
+                        FlightParams(
+                            launch = GeoPoint(latitude = 40.8838, longitude = -119.1178),
+                            launchAltitudeMslMeters = 1191.0,
+                            apogeeAglMeters = 3048.0,
+                            ascentSeconds = 25.0,
+                            descentSeconds = 180.0,
+                            driftBearingDeg = 135.0,
+                            driftDistanceMeters = 800.0,
+                        ),
                     ),
-                ),
                 timeScale = SIMULATOR_TIME_SCALE,
             ),
         )

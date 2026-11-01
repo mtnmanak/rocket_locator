@@ -21,8 +21,9 @@ class MeasuredFixAcceptanceTest {
     fun rejectedGgaQualityOnlyUpdatesReceiverStatus(quality: Int) {
         val tracker = seededTracker()
         val before = tracker.state
-        val rejected = gga(latitude = "4100.000", quality = "$quality", altitude = "1800.0")
-            .replace(",08,0.9,", ",03,55.0,")
+        val rejected =
+            gga(latitude = "4100.000", quality = "$quality", altitude = "1800.0")
+                .replace(",08,0.9,", ",03,55.0,")
         val after = feed(tracker, rejected, 2_000L)
         assertFixRetained(before, after)
         assertEquals(before.altitudeMslMeters, after.altitudeMslMeters)
@@ -174,20 +175,28 @@ class MeasuredFixAcceptanceTest {
         assertEquals(1500.0, after.maxAltitudeMslMeters)
     }
 
-    private fun seededTracker(): FlightTracker = FlightTracker().also {
-        val state = feed(it, gga(), 1_000L)
-        assertEquals(GeoPoint(40.0, -105.0), state.position)
-        assertEquals(1500.0, state.altitudeMslMeters)
-        assertEquals(1_000L, state.lastFixAtMs)
-    }
+    private fun seededTracker(): FlightTracker =
+        FlightTracker().also {
+            val state = feed(it, gga(), 1_000L)
+            assertEquals(GeoPoint(40.0, -105.0), state.position)
+            assertEquals(1500.0, state.altitudeMslMeters)
+            assertEquals(1_000L, state.lastFixAtMs)
+        }
 
-    private fun feed(tracker: FlightTracker, body: String, nowMs: Long): RocketState {
+    private fun feed(
+        tracker: FlightTracker,
+        body: String,
+        nowMs: Long,
+    ): RocketState {
         val result = parser.parse(checked(body))
         assertTrue(result is NmeaParseResult.Parsed, "Fixture must parse: $result")
         return tracker.onResult(result, nowMs)
     }
 
-    private fun assertFixRetained(before: RocketState, after: RocketState) {
+    private fun assertFixRetained(
+        before: RocketState,
+        after: RocketState,
+    ) {
         assertEquals(before.position, after.position, "Keep the last measured position")
         assertEquals(before.lastFixAtMs, after.lastFixAtMs, "Do not renew fix receipt time")
         assertEquals(before.path, after.path, "Do not append a rejected position")
@@ -204,8 +213,7 @@ class MeasuredFixAcceptanceTest {
         "GPRMC,120001,A,4100.000,N,10600.000,W,22.4,84.4,311026,," +
             (mode?.let { ",$it" } ?: "")
 
-    private fun gll(mode: String?): String =
-        "GPGLL,4100.000,N,10600.000,W,120001,A" + (mode?.let { ",$it" } ?: "")
+    private fun gll(mode: String?): String = "GPGLL,4100.000,N,10600.000,W,120001,A" + (mode?.let { ",$it" } ?: "")
 
     private fun checked(body: String): String {
         val checksum = body.fold(0) { sum, char -> sum xor char.code }
