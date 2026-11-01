@@ -127,7 +127,7 @@ class FlightTrackerTest {
         assertEquals(GeoPoint(baseLat, baseLon), state.position, "no-fix GGA must not move position")
         assertEquals(1500.0, state.altitudeMslMeters, "no-fix GGA must not change altitude")
         assertEquals(1500.0, state.maxAltitudeMslMeters)
-        assertEquals(0.9, state.hdop, "no-fix GGA must not change hdop")
+        assertEquals(55.0, state.hdop, "no-fix GGA still updates receiver status")
         assertEquals(1_000L, state.lastFixAtMs, "no-fix GGA must not bump lastFixAtMs")
         assertEquals(1, state.path.size, "no-fix GGA must not add a path point")
         // ...but it does report link health and receiver status:

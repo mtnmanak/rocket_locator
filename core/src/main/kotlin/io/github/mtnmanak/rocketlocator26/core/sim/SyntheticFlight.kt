@@ -109,7 +109,9 @@ class SyntheticFlight(private val params: FlightParams) {
         val descentCount = max(1, (params.descentSeconds * params.sampleHz).roundToInt())
         val landing = destination(params.launch, params.driftBearingDeg, params.driftDistanceMeters)
         val courseDeg = normalizeBearing(params.driftBearingDeg)
-        val descentSpeedKnots = params.driftDistanceMeters / params.descentSeconds * MPS_TO_KNOTS
+        // Movement takes the rounded sample duration, not the requested duration.
+        val descentDurationSeconds = descentCount.toDouble() / params.sampleHz
+        val descentSpeedKnots = params.driftDistanceMeters / descentDurationSeconds * MPS_TO_KNOTS
 
         val samples = ArrayList<SimulatedSample>(PAD_SAMPLES + ascentCount + descentCount + LANDED_SAMPLES)
         var index = 0
@@ -240,7 +242,8 @@ class SyntheticFlight(private val params: FlightParams) {
         val theta = bearingDeg * DEG_TO_RAD
         val phi1 = start.latitude * DEG_TO_RAD
         val lambda1 = start.longitude * DEG_TO_RAD
-        val phi2 = asin(sin(phi1) * cos(delta) + cos(phi1) * sin(delta) * cos(theta))
+        val sinPhi2 = sin(phi1) * cos(delta) + cos(phi1) * sin(delta) * cos(theta)
+        val phi2 = asin(sinPhi2.coerceIn(-1.0, 1.0)) // rounding can exceed unity near a pole
         val lambda2 = lambda1 + atan2(
             sin(theta) * sin(delta) * cos(phi1),
             cos(delta) - sin(phi1) * sin(phi2),

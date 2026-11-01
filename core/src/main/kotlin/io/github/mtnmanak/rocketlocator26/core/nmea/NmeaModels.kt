@@ -44,6 +44,8 @@ data class RmcSentence(
     val courseDeg: Double?,
     /** Date as transmitted, "ddmmyy". */
     val date: String?,
+    /** Positioning mode; null for legacy/empty fields, '?' for malformed modes. */
+    val mode: Char? = null,
 ) : NmeaSentence
 
 /** GLL — Geographic position, latitude/longitude. */
@@ -53,6 +55,8 @@ data class GllSentence(
     val longitude: Double?,
     val timeUtc: String?,
     val isValid: Boolean,
+    /** Positioning mode; null for legacy/empty fields, '?' for malformed modes. */
+    val mode: Char? = null,
 ) : NmeaSentence
 
 /** VTG — Course over ground and ground speed. */

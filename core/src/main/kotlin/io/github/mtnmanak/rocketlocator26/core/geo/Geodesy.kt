@@ -12,8 +12,9 @@ import kotlin.math.sqrt
  *
  * All calculations use the great-circle (haversine) model on a sphere of
  * radius [EARTH_RADIUS_METERS]. Over recovery-scale distances (meters to a
- * few tens of kilometers) the spherical error versus the WGS-84 ellipsoid is
- * well under 0.5%, which is far below GPS fix error.
+ * few tens of kilometers) error versus WGS-84 can reach about 0.56% along a
+ * meridian (30,022.67 m spherical vs 29,855.06 m ellipsoidal over 0.27°).
+ * This is adequate for path decimation; revisit before Phase 3 displays distance.
  */
 object Geodesy {
 
