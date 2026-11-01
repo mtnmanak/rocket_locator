@@ -8,8 +8,9 @@ import io.github.mtnmanak.rocketlocator26.core.geo.GeoPoint
  * @property point horizontal position of the sample.
  * @property altitudeMslMeters altitude above mean sea level at the time the
  *   sample was recorded, or null if no altitude was known yet.
- * @property timestampMs receiver-local wall-clock time (epoch millis) at which
- *   the sample was recorded.
+ * @property timestampMs receipt time of the sample, on the same caller-supplied clock as
+ *   [FlightTracker.onResult]'s `nowMs` (monotonic in the app, not epoch millis). A future GPX/KML
+ *   exporter must convert it to wall time.
  */
 data class TrackPoint(
     val point: GeoPoint,

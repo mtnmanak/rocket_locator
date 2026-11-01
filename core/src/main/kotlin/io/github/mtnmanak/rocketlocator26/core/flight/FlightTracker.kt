@@ -76,7 +76,9 @@ class FlightTracker(
      * Applies one parse result to the state.
      *
      * @param result output of the NMEA parser for one line.
-     * @param nowMs receiver-local wall-clock time (epoch millis) of receipt.
+     * @param nowMs receipt time in milliseconds from the caller's clock. The app passes a MONOTONIC clock
+     *   (`SystemClock.elapsedRealtime`), so fix ages and the altitude rate gate are immune to wall-clock jumps;
+     *   it is not an epoch time.
      * @return the updated state snapshot (also available via [state]).
      */
     fun onResult(

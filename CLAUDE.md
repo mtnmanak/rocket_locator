@@ -69,7 +69,7 @@ Requires JDK 17 + Android SDK ~~35~~ platform 37 (write `local.properties` with 
 ./gradlew :core:test :transport:test :app:testDebugUnitTest   # unit tests (~~208+~~ 354+, must stay green)
 ./gradlew :app:assembleDebug           # debug APK
 ```
-CI also runs ktlint 1.8.0 and detekt 1.23.8 via checksum-verified CLIs; `config/detekt/baseline.xml` holds 103 pre-existing issues.
+CI also runs ktlint 1.8.0 and detekt 1.23.8 via checksum-verified CLIs; `config/detekt/baseline.xml` holds 74 entries covering the 103 pre-existing findings.
 
 Windows dev note: files created on Windows lack the executable bit — any new shell script needs `git update-index --chmod=+x <file>`.
 
